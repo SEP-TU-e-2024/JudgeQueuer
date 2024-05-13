@@ -12,6 +12,7 @@ CONFIG_FILE = ".github/metrics_config.json"
 
 # Colors
 AQUA = '\033[94;1m'
+RED = '\033[31;1m'
 TABLE_COL = ('\033[97;4m', '\033[37;4;2m')
 END_COL = '\033[0m'
 
@@ -85,6 +86,10 @@ def main():
     print(f"{AQUA}Ranks{END_COL}")
     nice_print(ranks)
     print(f"{AQUA}Grade:{END_COL} ", grade)
+
+    # Fail process
+    if grade < 10:
+        raise Exception(f"{RED}Code violations found!!!!!{END_COL}")
     
 if __name__ == "__main__":
     main()
