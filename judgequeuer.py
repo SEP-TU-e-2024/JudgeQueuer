@@ -24,6 +24,7 @@ async def main():
 	pass
 
 if __name__ == "__main__":
+	# Wrap main to make sure all Azure objects are closed properly
 	async def wrap_main():
 		try:
 			await main()
@@ -33,4 +34,5 @@ if __name__ == "__main__":
 			await resource_client.close()
 			await credentials.close()
 	
+	# Run the main wrapper async
 	asyncio.run(wrap_main())
