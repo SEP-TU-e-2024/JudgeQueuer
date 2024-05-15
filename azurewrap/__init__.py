@@ -1,4 +1,4 @@
-from base import Azure
+from azurewrap.base import Azure
 
 # Add commonly used Azure class to package
 __all__ = ['Azure']
