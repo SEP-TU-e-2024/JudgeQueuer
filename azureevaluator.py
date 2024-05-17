@@ -1,27 +1,117 @@
-from evaluators import SubmissionEvaluator
-from models import JudgeRequest, JudgeResult
+import os
 
+from azure.mgmt.compute.models import VirtualMachineScaleSetVM
+from dotenv import load_dotenv
+
+from azurewrap.base import Azure
+from evaluators import SubmissionEvaluator
+from models import JudgeRequest, JudgeResult, MachineType
+
+# Initialize environment variables from the `.env` file
+load_dotenv()
+
+# Load Azure constants from env vars
+SUBSCRIPTION_ID = os.getenv("AZURE_SUBSCRIPTION_ID")
+RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
+
+azure = Azure(subscription_id=SUBSCRIPTION_ID, resource_group_name=RESOURCE_GROUP_NAME)
 
 class AzureEvaluator(SubmissionEvaluator):
 	"""
 	An evaluator using Azure Virtual Machine Scale Set.
 	"""
+	def __init__(self):
+		self.vmss_dict = {}
+
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
-		# TODO: get the right VMSS, or make one if needed. Then forward call to that.
-		pass
+		# get the right VMSS, or make one if needed.
+		machine_type = judge_request.resource_allocation.machine_type
+		if machine_type in self.vmss_dict.keys():
+			avmss = self.vmss_dict[machine_type]
+		else:
+			avmss_name = "my-vmssnu_" + machine_type.descriptor
+			vmss = await azure.create_vmss(avmss_name)
+			avmss = AzureVMSS(machine_type, avmss_name, vmss)
+			self.vmss_dict[machine_type] = avmss
+
+		# Then forward call to that.
+		judge_result = await avmss.submit(judge_request)
+
+		return judge_result
 
 class AzureVMSS:
 	"""
-	An Azure Virtual Machine Scale Set.
+	An Azure Virtual Machine Scale Set. A Set contains a single machine type.
 	"""
+	def __init__(self, machine_type: MachineType, avmss_name: str, vmss):
+		self.machine_type: machine_type
+		self.avmss_name: avmss_name
+		# self.vm_dict = {}
+		self.vmss = vmss
+
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
-		# TODO: get the right VM, or scale up if not available.
-		pass
+		# Get a right vm that is available
+		vm = self.check_available_vm()
+
+		# If no available vm than add capacity
+		if vm is None:
+			# Get available vm after the added capacity, error if no available
+			vm = self.add_capacity()
+
+		# Submit using the vm the judge request
+		return await self.submit_vm(vm, judge_request)
+
+
+	async def add_capacity(self):
+
+		vmss = await azure.get_vmss(self.avmss_name)
+		# Increase capacity of vmss with an arbitrary max of 5
+		capacity = vmss.sku.capacity
+		if (capacity < 5):
+			await azure.set_capacity(capacity + 1, self.avmss_name)
+		
+		vm = self.check_available_vm()
+
+		if vm is None:
+			# TODO throw error
+			return -1
+		
+		# Decrease capacity of vmss, always keep at least capacity 1
+		capacity = vmss.sku.capacity
+		if (capacity > 1):
+			await azure.set_capacity(capacity - 1, self.avmss_name)
+
+		return vm
+			
+	
+	async def submit_vm(self, vm: VirtualMachineScaleSetVM, judge_request: JudgeRequest) -> JudgeResult:
+		avm = AzureVM(vm)
+		# self.vm_dict[vm.name] = avm
+		judge_result = await avm.submit(self, judge_request)
+
+		return judge_result
+	
+	async def check_available_vm(self):
+		# Get the list of vms
+		vms = azure.list_vms(self.machine_type, self.avmss_name)
+		
+		for vm in vms:
+			# TODO Select a VM with enough capacity
+			return vm
+		
+		# no vm found
+		return None
+			
+	async def close(self):
+		azure.delete_vmss(self.machine_type)
 
 class AzureVM:
 	"""
 	An Azure Virtual Machine.
 	"""
+	def __init__(self, vm):
+		self.vm = vm
+
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
 		# TODO: communicate the judge request to the VM and monitor status
 		pass
