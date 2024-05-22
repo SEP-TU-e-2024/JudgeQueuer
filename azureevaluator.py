@@ -119,9 +119,20 @@ class AzureVM:
 	"""
 	def __init__(self, vm):
 		self.vm = vm
+		self.free_cpu = 0
+		self.free_gpu = 0
+		self.free_memory = 0
+	
 	async def capacity(self, resource_allocation: ResourceSpecification):
 		pass
+		# Check cpu, gpu and memory capacity of vm and return true if there is enough capacity
+		if (self.free_cpu >= resource_allocation.num_cpu and self.free_gpu >= resource_allocation.num_gpu and self.free_memory >= resource_allocation.num_memory):
+			return True
+		
+		return False
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
 		# TODO: communicate the judge request to the VM and monitor status
+		# TODO: keep track of free resources
+		pass
 		pass
