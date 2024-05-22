@@ -21,7 +21,7 @@ async def main():
 
 	# Assign temporary values
 
-	# Assignn submission informatin
+	# Assign submission information
 	submission = Submission()
 	submission.type = 1
 	submission.source_url = "source_url"
@@ -37,7 +37,7 @@ async def main():
 	resource_allocation.num_memory = 32
 	resource_allocation.num_gpu = 1
 
-	# Assign Judge request 
+	# Assign Judge request
 	judge_request = JudgeRequest()
 	judge_request.submission = submission
 	judge_request.resource_allocation = resource_allocation
