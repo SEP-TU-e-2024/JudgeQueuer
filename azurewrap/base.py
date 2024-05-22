@@ -172,11 +172,11 @@ class Azure:
 		vmss.sku.capacity = capacity
 
 		poller: AsyncLROPoller = await self.compute_client.virtual_machine_scale_sets.begin_update(
-			self.resource_group_name, VMSS_NAME, vmss
+			self.resource_group_name, vmss_name, vmss
 		)
 		await poller.wait()
 
-	async def delete_vm(self, vm_name: str):
+	async def delete_vm(self, vm_name: str, vmss_name=VMSS_NAME):
 		"""
 		Deletes a specific VM from the set.
 
@@ -184,7 +184,7 @@ class Azure:
 		"""
 		ids = VirtualMachineScaleSetVMInstanceIDs(instance_ids=[vm_name])
 		poller = await self.compute_client.virtual_machine_scale_sets.begin_delete_instances(
-			self.resource_group_name, VMSS_NAME, ids
+			self.resource_group_name, vmss_name, ids
 		)
 		await poller.wait()
 
