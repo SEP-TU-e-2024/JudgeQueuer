@@ -6,7 +6,8 @@ class MachineType:
 	A type of machine.
 	"""
 	# TODO: improve description
-	
+	descriptor: str
+
 	def __init__(self, descriptor: str):
 		self.descriptor = descriptor
 
@@ -14,6 +15,10 @@ class ResourceSpecification:
 	"""
 	The specification of allocated resources to evaluate a submission.
 	"""
+	num_cpu: int
+	num_memory: int
+	num_gpu: int
+	machine_type: 'MachineType'
 
 	def __init__(self, num_cpu: int, num_memory: int, num_gpu: int, machine_type: 'MachineType'):
 		self.num_cpu = num_cpu
@@ -27,15 +32,14 @@ class SubmissionType(Enum):
 	"""
 	CODE = 1
 	SOLUTION = 2
-	
-	def __init__(self, type: Enum):
-		self.type = type
 
 
 class Submission:
 	"""
 	A submission that should be evaluated.
 	"""
+	type: 'SubmissionType'
+	source_url: str
 
 	def __init__(self, type: 'SubmissionType', source_url: str):
 		self.type = type
@@ -45,6 +49,8 @@ class JudgeRequest:
 	"""
 	A request for a submission to be evaluated according to some resource specification.
 	"""
+	submission: 'Submission'
+	resource_allocation: 'ResourceSpecification'
 
 	def __init__(self, submission: 'Submission', resource_allocation: 'ResourceSpecification'):
 		self.submission = submission
@@ -56,6 +62,7 @@ class JudgeResult:
 
 	Formatted in JSON.
 	"""
-
+	result: str
+	
 	def __init__(self, result: str):
 		self.result = result
