@@ -26,7 +26,9 @@ Note that this option for authentication is only good for development and testin
 
 If you already had your IDE open with this project, you may have to restart it to make the IDE use the Azure credentials properly.
 
-## Ruff
+## Formatting
 For proper code formatting, we use Ruff. When you create a pull request, Ruff automatically checks the code and tells you about any possible formatting errors.
 
 If you want to use Ruff locally, install it with `pip install ruff`, then use `ruff check` to check for errors.
+
+Furthermore, please use the [EditorConfig for VS Code extension](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig) if you use VS Code. This automatically sets up your IDE for this repository with the right formatting (e.g. indentation) settings.
