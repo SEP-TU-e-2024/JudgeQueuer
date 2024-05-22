@@ -47,7 +47,7 @@ class JudgeVMSS:
 	"""
 	machine_type: 'MachineType'
 	judgevmss_name: str
-	judgevm_dict: Dict[str, 'Judgevm']
+	judgevm_dict: Dict[str, 'JudgeVM']
 	vmss: VirtualMachineScaleSet
 	azure: Azure
 	
@@ -73,7 +73,6 @@ class JudgeVMSS:
 			vm = await self.check_available_vm(resource_allocation)
 
 			if vm is None:
-				# Throw exception
 				raise Exception("No vm available for judge request, even after adding capacity")
 
 		# Submit using the vm the judge request
@@ -107,7 +106,7 @@ class JudgeVMSS:
 	
 	async def submit_vm(self, vm: VirtualMachineScaleSetVM, judge_request: JudgeRequest) -> JudgeResult:
 		judgevm = self.judgevm_dict[vm.name]
-		judge_result = await judgevm.submit(self, judge_request)
+		judge_result = await judgevm.submit(judge_request)
 
 		return judge_result
 	
@@ -124,11 +123,12 @@ class JudgeVMSS:
 			if vm.name in self.judgevm_dict:
 				judgevm = self.judgevm_dict[vm.name]
 			
-			# Check if there is enough free resource capacity on this vm
-			if await judgevm.capacity(resource_allocation):
-				
-				return vm
-		
+				# Check if there is enough free resource capacity on this vm
+				if await judgevm.capacity(resource_allocation):
+					
+					return vm
+			
+		print(self.judgevm_dict)
 		# No vm found
 		return None
 	
@@ -139,8 +139,11 @@ class JudgeVMSS:
 			# Check if each vm has a judgevm class stored to it in dict
 			if vm.name not in self.judgevm_dict:
 				# Create and safe vm class
-				judgevm = Judgevm(vm, self.azure)
+				judgevm = JudgeVM(vm, self.azure)
 				self.judgevm_dict[vm.name] = judgevm
+			else:
+				print(vm.name)
+				print(self.judgevm_dict[vm.name])
 
 		for key in list(self.judgevm_dict):
 			judgevm = self.judgevm_dict[key]
@@ -164,11 +167,11 @@ class JudgeVMSS:
 		Close the vmss and check if no associated vms
 		"""
 		if bool(self.judgevm_dict):
-			raise Exception("judgevmSS was tried to be closed while having associated vms")
+			raise Exception("judgevmSS was tried to be closed while having associated vms in dict:" + self.judgevm_dict)
 
 		await self.azure.delete_vmss(self.machine_type)
 
-class Judgevm:
+class JudgeVM:
 	"""
 	An Azure Virtual Machine.
 	"""
@@ -181,12 +184,12 @@ class Judgevm:
 	def __init__(self, vm: VirtualMachineScaleSetVM, azure: Azure):
 		self.vm = vm
 		self.azure = azure
-		self.free_cpu = 0
-		self.free_gpu = 0
-		self.free_memory = 0
+		self.free_cpu = 10
+		self.free_gpu = 2
+		self.free_memory = 50
 	
 	async def capacity(self, resource_allocation: ResourceSpecification) -> bool:
-		pass
+		# pass
 		# TODO implement check for capacity
 		# Check cpu, gpu and memory capacity of vm and return true if there is enough capacity
 		if self.free_cpu >= resource_allocation.num_cpu and self.free_gpu >= resource_allocation.num_gpu and self.free_memory >= resource_allocation.num_memory:
@@ -201,4 +204,4 @@ class Judgevm:
 
 	async def alive(self):
 		# TODO check if self.vm is actually still alive (decreasing capacity in vmss can remove it, or by calling delete_vm)
-		pass
+		return True
