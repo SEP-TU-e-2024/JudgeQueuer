@@ -1,37 +1,27 @@
-import os
-
 from azure.mgmt.compute.models import VirtualMachineScaleSetVM
-from dotenv import load_dotenv
 
 from azurewrap.base import Azure
 from evaluators import SubmissionEvaluator
 from models import JudgeRequest, JudgeResult, MachineType, ResourceSpecification
 
-# Initialize environment variables from the `.env` file
-load_dotenv()
-
-# Load Azure constants from env vars
-SUBSCRIPTION_ID = os.getenv("AZURE_SUBSCRIPTION_ID")
-RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
-
-azure = Azure(subscription_id=SUBSCRIPTION_ID, resource_group_name=RESOURCE_GROUP_NAME)
 
 class AzureEvaluator(SubmissionEvaluator):
 	"""
 	An evaluator using Azure Virtual Machine Scale Set.
 	"""
-	def __init__(self):
+	def __init__(self, azure: Azure):
 		self.vmss_dict = {}
+		self.azure = azure
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
 		# get the right VMSS, or make one if needed.
 		machine_type = judge_request.resource_allocation.machine_type
-		if machine_type in self.vmss_dict.keys():
+		if machine_type in self.vmss_dict:
 			azurevmss = self.vmss_dict[machine_type]
 		else:
 			azurevmss_name = "my-vmssnu_" + machine_type.descriptor
 			vmss = await self.azure.create_vmss(azurevmss_name)
-			azurevmss = AzureVMSS(machine_type, azurevmss_name, vmss)
+			azurevmss = AzureVMSS(machine_type, azurevmss_name, vmss, self.azure)
 			self.vmss_dict[machine_type] = azurevmss
 
 		# Then forward call to that.
@@ -43,11 +33,12 @@ class AzureVMSS:
 	"""
 	An Azure Virtual Machine Scale Set. A Set contains a single machine type.
 	"""
-	def __init__(self, machine_type: MachineType, azurevmss_name: str, vmss):
+	def __init__(self, machine_type: MachineType, azurevmss_name: str, vmss, azure: Azure):
 		self.machine_type: machine_type
 		self.azurevmss_name: azurevmss_name
 		self.azurevm_dict = {}
 		self.vmss = vmss
+		self.azure = azure
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
 		resource_allocation = judge_request.resource_allocation
@@ -80,7 +71,7 @@ class AzureVMSS:
 		# Increase capacity of vmss with an arbitrary max of 5
 		capacity = self.vmss.sku.capacity
 		if (capacity < 5):
-			await azure.set_capacity(capacity + 1, self.azurevmss_name)
+			await self.azure.set_capacity(capacity + 1, self.azurevmss_name)
 		
 		# Update vm_dict, vm(s) could have been added
 		self.update_vm_dict()
@@ -89,7 +80,7 @@ class AzureVMSS:
 		# Decrease capacity of vmss, always keep at least capacity 1
 		capacity = self.vmss.sku.capacity
 		if (capacity > 1):
-			await azure.set_capacity(capacity - 1, self.azurevmss_name)
+			await self.azure.set_capacity(capacity - 1, self.azurevmss_name)
 
 		# Update vm_dict, vm(s) could have been deleted
 		self.update_vm_dict()
@@ -102,7 +93,7 @@ class AzureVMSS:
 	
 	async def check_available_vm(self, resource_allocation: ResourceSpecification):
 		# Get the list of vms
-		vms = azure.list_vms(self.machine_type, self.azurevmss_name)
+		vms = self.azure.list_vms(self.machine_type, self.azurevmss_name)
 
 		# Update vm_dict, make sure the dict is up to date
 		self.update_vm_dict()
@@ -122,13 +113,13 @@ class AzureVMSS:
 		return None
 	
 	async def update_vm_dict(self):
-		vms = azure.list_vms(self.machine_type, self.azurevmss_name)
+		vms = self.azure.list_vms(self.machine_type, self.azurevmss_name)
 
 		for vm in vms:
 			# Check if each vm has a AzureVM class stored to it in dict
 			if (not self.vm_dict[vm.name]):
 				# Create and safe vm class
-				azurevm = AzureVM(vm)
+				azurevm = AzureVM(vm, self.azure)
 				self.vm_dict[vm.name] = azurevm
 
 		for key in self.vm_dict:
@@ -139,14 +130,15 @@ class AzureVMSS:
 				self.vm_dict.pop(key)
 			
 	async def close(self):
-		azure.delete_vmss(self.machine_type)
+		self.azure.delete_vmss(self.machine_type)
 
 class AzureVM:
 	"""
 	An Azure Virtual Machine.
 	"""
-	def __init__(self, vm):
+	def __init__(self, vm: VirtualMachineScaleSetVM, azure: Azure):
 		self.vm = vm
+		self.azure = azure
 		self.free_cpu = 0
 		self.free_gpu = 0
 		self.free_memory = 0

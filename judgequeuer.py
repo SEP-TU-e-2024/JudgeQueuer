@@ -17,7 +17,7 @@ RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
 azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
 
 async def main():
-	ae = AzureEvaluator()
+	ae = AzureEvaluator(azure)
 
 	# Assign temporary values
 
