@@ -20,6 +20,9 @@ class AzureEvaluator(SubmissionEvaluator):
 		self.azure = azure
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
+		"""
+		Handles finding, creating and deletion of vmss that is appropriate for this judgeRequest.
+		"""
 		# Get the right VMSS, or make one if needed.
 		machine_type = judge_request.resource_allocation.machine_type
 		if machine_type in self.judgevmss_dict:
@@ -59,6 +62,9 @@ class JudgeVMSS:
 		self.azure = azure
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
+		"""
+		Handle the request for this machine type vmss, an available vm will be found/created and assigned.
+		"""
 		resource_allocation = judge_request.resource_allocation
 
 		# Get a right vm that is available
@@ -80,20 +86,25 @@ class JudgeVMSS:
 
 		# Reduce capacity and update vm dict
 		await self.reduce_capacity()
-		await self.update_vm_dict()
+		await self.__update_vm_dict()
 
 		return judge_result
 
 	async def add_capacity(self):
-		# Increase capacity of vmss with an arbitrary max of 5
+		"""
+		Increases capacity of vmss using Azure which could increase the amount of vmss.
+		"""
+		# Increase capacity of vmss with 1 capacity
 		capacity = self.vmss.sku.capacity
-		if capacity < 5:
-			await self.azure.set_capacity(capacity + 1, self.judgevmss_name)
+		await self.azure.set_capacity(capacity + 1, self.judgevmss_name)
 		
 		# Update judgevm_dict, vm(s) could have been added
-		await self.update_vm_dict()
+		await self.__update_vm_dict()
 			
 	async def reduce_capacity(self):
+		"""
+		Reduces capacity of vmss using Azure which could include reducing amount of vms present.
+		"""
 		# Decrease capacity of vmss
 		capacity = self.vmss.sku.capacity
 
@@ -102,20 +113,27 @@ class JudgeVMSS:
 			await self.azure.set_capacity(capacity - 1, self.judgevmss_name)
 
 		# Update vm_dict, vm(s) could have been deleted
-		await self.update_vm_dict()
+		await self.__update_vm_dict()
 	
 	async def submit_vm(self, vm: VirtualMachineScaleSetVM, judge_request: JudgeRequest) -> JudgeResult:
+		"""
+		Submit a judgeRequest to a vm, will pass the request on to the corresponding judgeVM class to handle.
+		"""
 		judgevm = self.judgevm_dict[vm.name]
 		judge_result = await judgevm.submit(judge_request)
 
 		return judge_result
 	
 	async def check_available_vm(self, resource_allocation: ResourceSpecification) -> VirtualMachineScaleSetVM | None:
+		"""
+		Goes through list of vms in this vmss and checks whether they have enough capacity to take on the resource allocation.
+		Returns a vm with enough capacity or None if there is none.
+		"""
 		# Get the list of vms
 		vms = await self.azure.list_vms(self.judgevmss_name)
 
 		# Update vm_dict, make sure the dict is up to date
-		await self.update_vm_dict()
+		await self.__update_vm_dict()
 
 		# Go over the virtual machine to find one with enough capacity
 		for vm in vms:
@@ -124,14 +142,18 @@ class JudgeVMSS:
 				judgevm = self.judgevm_dict[vm.name]
 			
 				# Check if there is enough free resource capacity on this vm
-				if await judgevm.capacity(resource_allocation):
+				if await judgevm.check_capacity(resource_allocation):
 					
 					return vm
 			
 		# No vm found
 		return None
 	
-	async def update_vm_dict(self):
+	async def __update_vm_dict(self):
+		"""
+		Internal method to update the vm_dict,
+		checks whether vm is missing from dict and if vm is included when it has already been deleted
+		"""
 		vms = await self.azure.list_vms(self.judgevmss_name)
 
 		for vm in vms:
@@ -152,7 +174,7 @@ class JudgeVMSS:
 		"""
 		Check if there are no vms part of this vmss
 		"""
-		await self.update_vm_dict()
+		await self.__update_vm_dict()
 		if len(list(self.judgevm_dict)) > 0:
 			# Not empty
 			return False
@@ -184,7 +206,10 @@ class JudgeVM:
 		self.free_gpu = 2
 		self.free_memory = 50
 	
-	async def capacity(self, resource_allocation: ResourceSpecification) -> bool:
+	async def check_capacity(self, resource_allocation: ResourceSpecification) -> bool:
+		"""
+		Check whether this vm has enough capacity to take on the resource allocation
+		"""
 		# pass
 		# TODO implement check for capacity
 		# Check cpu, gpu and memory capacity of vm and return true if there is enough capacity
