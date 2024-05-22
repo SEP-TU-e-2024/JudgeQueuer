@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 from azureevaluator import AzureEvaluator
 from azurewrap import Azure
-from models import JudgeRequest, MachineType, ResourceSpecification, Submission, SubmissionType
+from models import JudgeRequest, MachineType, ResourceSpecification, Submission
 
 # Initialize environment variables from the `.env` file
 load_dotenv()
