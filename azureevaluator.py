@@ -1,4 +1,4 @@
-from azure.mgmt.compute.models import VirtualMachineScaleSetVM
+from azure.mgmt.compute.models import VirtualMachineScaleSet, VirtualMachineScaleSetVM
 
 from azurewrap.base import Azure
 from evaluators import SubmissionEvaluator
@@ -9,6 +9,9 @@ class AzureEvaluator(SubmissionEvaluator):
 	"""
 	An evaluator using Azure Virtual Machine Scale Set.
 	"""
+	azurevmss_dict: dict
+	azure: Azure
+	
 	def __init__(self, azure: Azure):
 		self.azurevmss_dict = {}
 		self.azure = azure
@@ -19,7 +22,7 @@ class AzureEvaluator(SubmissionEvaluator):
 		if machine_type in self.azurevmss_dict:
 			azurevmss = self.azurevmss_dict[machine_type]
 		else:
-			azurevmss_name = "my-vmssnu_" + machine_type.descriptor
+			azurevmss_name = "benchlab_judge_" + machine_type.descriptor
 			vmss = await self.azure.create_vmss(azurevmss_name)
 			azurevmss = AzureVMSS(machine_type, azurevmss_name, vmss, self.azure)
 			self.azurevmss_dict[machine_type] = azurevmss
@@ -38,7 +41,13 @@ class AzureVMSS:
 	"""
 	An Azure Virtual Machine Scale Set. A Set contains a single machine type.
 	"""
-	def __init__(self, machine_type: MachineType, azurevmss_name: str, vmss, azure: Azure):
+	machine_type: 'MachineType'
+	azurevmss_name: str
+	azurevm_dict: dict
+	vmss: VirtualMachineScaleSet
+	azure: Azure
+	
+	def __init__(self, machine_type: MachineType, azurevmss_name: str, vmss: VirtualMachineScaleSet , azure: Azure):
 		self.machine_type: machine_type
 		self.azurevmss_name: azurevmss_name
 		self.azurevm_dict = {}
@@ -157,6 +166,12 @@ class AzureVM:
 	"""
 	An Azure Virtual Machine.
 	"""
+	vm: VirtualMachineScaleSetVM
+	azure: Azure
+	free_cpu: int
+	free_gpu: int
+	free_memory: int
+
 	def __init__(self, vm: VirtualMachineScaleSetVM, azure: Azure):
 		self.vm = vm
 		self.azure = azure
