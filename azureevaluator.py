@@ -34,7 +34,7 @@ class AzureEvaluator(SubmissionEvaluator):
 		# Then forward call to that.
 		judge_result = await judgevmss.submit(judge_request)
 
-		if judgevmss.is_empty():
+		if await judgevmss.is_empty():
 			# judgevmss is empty with no vms, close judgevmss
 			await judgevmss.close()
 			self.judgevmss_dict.pop(machine_type)
@@ -128,7 +128,6 @@ class JudgeVMSS:
 					
 					return vm
 			
-		print(self.judgevm_dict)
 		# No vm found
 		return None
 	
@@ -141,9 +140,6 @@ class JudgeVMSS:
 				# Create and safe vm class
 				judgevm = JudgeVM(vm, self.azure)
 				self.judgevm_dict[vm.name] = judgevm
-			else:
-				print(vm.name)
-				print(self.judgevm_dict[vm.name])
 
 		for key in list(self.judgevm_dict):
 			judgevm = self.judgevm_dict[key]
@@ -156,8 +152,8 @@ class JudgeVMSS:
 		"""
 		Check if there are no vms part of this vmss
 		"""
-		self.update_vm_dict()
-		if bool(self.judgevm_dict):
+		await self.update_vm_dict()
+		if len(list(self.judgevm_dict)) > 0:
 			# Not empty
 			return False
 		return True
@@ -166,8 +162,8 @@ class JudgeVMSS:
 		"""
 		Close the vmss and check if no associated vms
 		"""
-		if bool(self.judgevm_dict):
-			raise Exception("judgevmSS was tried to be closed while having associated vms in dict:" + self.judgevm_dict)
+		if len(list(self.judgevm_dict)) <= 0:
+			raise Exception("judgevmSS was tried to be closed while having associated vms in dict:")
 
 		await self.azure.delete_vmss(self.machine_type)
 
