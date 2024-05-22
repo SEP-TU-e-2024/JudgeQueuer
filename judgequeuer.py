@@ -20,27 +20,18 @@ async def main():
 	ae = AzureEvaluator(azure)
 
 	# Assign temporary values
-
+	
 	# Assign submission information
-	submission = Submission()
-	submission.type = 1
-	submission.source_url = "source_url"
+	submission = Submission(1, "source_url")
 
 	# Assign Machine type
-	machine_type = MachineType()
-	machine_type.descriptor = "machine_type"
+	machine_type = MachineType("machine_type")
 
 	# Assign resource specification
-	resource_allocation = ResourceSpecification()
-	resource_allocation.machine_type = machine_type
-	resource_allocation.num_cpus = 4
-	resource_allocation.num_memory = 32
-	resource_allocation.num_gpu = 1
+	resource_allocation = ResourceSpecification(4, 32, 1, machine_type)
 
 	# Assign Judge request
-	judge_request = JudgeRequest()
-	judge_request.submission = submission
-	judge_request.resource_allocation = resource_allocation
+	judge_request = JudgeRequest(submission, resource_allocation)
 
 	# Test out submitting judge request
 	print(await ae.submit(judge_request))
