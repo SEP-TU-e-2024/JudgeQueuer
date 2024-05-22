@@ -12,48 +12,49 @@ class AzureEvaluator(SubmissionEvaluator):
 	An evaluator using Azure Virtual Machine Scale Set.
 	"""
 	# TODO: make sure that we have only 1 MachineType instance per its descriptor, otherwise this dict doesn't work
-	azurevmss_dict: Dict['MachineType', 'AzureVMSS']
+	judgevmss_dict: Dict['MachineType', 'JudgeVMSS']
 	azure: Azure
 	
 	def __init__(self, azure: Azure):
-		self.azurevmss_dict = {}
+		self.judgevmss_dict = {}
 		self.azure = azure
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
 		# Get the right VMSS, or make one if needed.
 		machine_type = judge_request.resource_allocation.machine_type
-		if machine_type in self.azurevmss_dict:
-			azurevmss = self.azurevmss_dict[machine_type]
+		if machine_type in self.judgevmss_dict:
+			judgevmss = self.judgevmss_dict[machine_type]
 		else:
-			azurevmss_name = "benchlab_judge_" + machine_type.descriptor
-			vmss = await self.azure.create_vmss(azurevmss_name)
-			azurevmss = AzureVMSS(machine_type, azurevmss_name, vmss, self.azure)
-			self.azurevmss_dict[machine_type] = azurevmss
+			judgevmss_name = "benchlab_judge_" + machine_type.descriptor
+			await self.azure.create_vmss(judgevmss_name)
+			vmss = await self.azure.get_vmss(judgevmss_name)
+			judgevmss = JudgeVMSS(machine_type, judgevmss_name, vmss, self.azure)
+			self.judgevmss_dict[machine_type] = judgevmss
 
 		# Then forward call to that.
-		judge_result = await azurevmss.submit(judge_request)
+		judge_result = await judgevmss.submit(judge_request)
 
-		if azurevmss.is_empty():
-			# azurevmss is empty with no vms, close azurevmss
-			await azurevmss.close()
-			self.azurevmss_dict.pop(machine_type)
+		if judgevmss.is_empty():
+			# judgevmss is empty with no vms, close judgevmss
+			await judgevmss.close()
+			self.judgevmss_dict.pop(machine_type)
 
 		return judge_result
 
-class AzureVMSS:
+class JudgeVMSS:
 	"""
 	An Azure Virtual Machine Scale Set. A Set contains a single machine type.
 	"""
 	machine_type: 'MachineType'
-	azurevmss_name: str
-	azurevm_dict: Dict[str, 'AzureVM']
+	judgevmss_name: str
+	judgevm_dict: Dict[str, 'Judgevm']
 	vmss: VirtualMachineScaleSet
 	azure: Azure
 	
-	def __init__(self, machine_type: MachineType, azurevmss_name: str, vmss: VirtualMachineScaleSet , azure: Azure):
-		self.machine_type: machine_type
-		self.azurevmss_name: azurevmss_name
-		self.azurevm_dict = {}
+	def __init__(self, machine_type: MachineType, judgevmss_name: str, vmss: VirtualMachineScaleSet , azure: Azure):
+		self.machine_type = machine_type
+		self.judgevmss_name = judgevmss_name
+		self.judgevm_dict = {}
 		self.vmss = vmss
 		self.azure = azure
 
@@ -88,9 +89,9 @@ class AzureVMSS:
 		# Increase capacity of vmss with an arbitrary max of 5
 		capacity = self.vmss.sku.capacity
 		if capacity < 5:
-			await self.azure.set_capacity(capacity + 1, self.azurevmss_name)
+			await self.azure.set_capacity(capacity + 1, self.judgevmss_name)
 		
-		# Update vm_dict, vm(s) could have been added
+		# Update judgevm_dict, vm(s) could have been added
 		await self.update_vm_dict()
 			
 	async def reduce_capacity(self):
@@ -99,20 +100,20 @@ class AzureVMSS:
 
 		# There needs to be capacity to be removed
 		if capacity > 0:
-			await self.azure.set_capacity(capacity - 1, self.azurevmss_name)
+			await self.azure.set_capacity(capacity - 1, self.judgevmss_name)
 
 		# Update vm_dict, vm(s) could have been deleted
 		await self.update_vm_dict()
 	
 	async def submit_vm(self, vm: VirtualMachineScaleSetVM, judge_request: JudgeRequest) -> JudgeResult:
-		azurevm = self.azurevm_dict[vm.name]
-		judge_result = await azurevm.submit(self, judge_request)
+		judgevm = self.judgevm_dict[vm.name]
+		judge_result = await judgevm.submit(self, judge_request)
 
 		return judge_result
 	
 	async def check_available_vm(self, resource_allocation: ResourceSpecification) -> VirtualMachineScaleSetVM | None:
 		# Get the list of vms
-		vms = await self.azure.list_vms(self.machine_type, self.azurevmss_name)
+		vms = await self.azure.list_vms(self.judgevmss_name)
 
 		# Update vm_dict, make sure the dict is up to date
 		await self.update_vm_dict()
@@ -120,39 +121,41 @@ class AzureVMSS:
 		# Go over the virtual machine to find one with enough capacity
 		for vm in vms:
 			# Get the azure vm class instance associated to the vm
-			if self.azurevm_dict[vm.name]:
-				azurevm = self.azurevm_dict[vm.name]
+			if self.judgevm_dict[vm.name]:
+				judgevm = self.judgevm_dict[vm.name]
 			
 			# Check if there is enough free resource capacity on this vm
-			if await azurevm.capacity(resource_allocation):
+			if await judgevm.capacity(resource_allocation):
+				
 				return vm
 		
 		# No vm found
 		return None
 	
 	async def update_vm_dict(self):
-		vms = await self.azure.list_vms(self.machine_type, self.azurevmss_name)
+		vms = await self.azure.list_vms(self.judgevmss_name)
 
 		for vm in vms:
-			# Check if each vm has a AzureVM class stored to it in dict
-			if not self.azurevm_dict[vm.name]:
+			# Check if each vm has a judgevm class stored to it in dict
+			if not self.judgevm_dict[vm.name]:
 				# Create and safe vm class
-				azurevm = AzureVM(vm, self.azure)
-				self.azurevm_dict[vm.name] = azurevm
+				judgevm = Judgevm(vm, self.azure)
+				print("added to judgevm_dict with key:" + vm.name)
+				self.judgevm_dict[vm.name] = judgevm
 
-		for key in self.azurevm_dict:
-			azurevm = self.azurevm_dict[key]
+		for key in self.judgevm_dict:
+			judgevm = self.judgevm_dict[key]
 			# Check if the vms in the dictionary are still alive
-			if not await azurevm.alive():
-				# Remove azurevm from dictionary
-				self.azurevm_dict.pop(key)
+			if not await judgevm.alive():
+				# Remove judgevm from dictionary
+				self.judgevm_dict.pop(key)
 
 	async def is_empty(self) -> bool:
 		"""
 		Check if there are no vms part of this vmss
 		"""
 		self.update_vm_dict()
-		if self.azurevm_dict:
+		if self.judgevm_dict:
 			# Not empty
 			return False
 		return True
@@ -161,12 +164,12 @@ class AzureVMSS:
 		"""
 		Close the vmss and check if no associated vms
 		"""
-		if self.azurevm_dict:
-			raise Exception("AzureVMSS was tried to be closed while having associated vms")
+		if self.judgevm_dict:
+			raise Exception("judgevmSS was tried to be closed while having associated vms")
 
 		await self.azure.delete_vmss(self.machine_type)
 
-class AzureVM:
+class Judgevm:
 	"""
 	An Azure Virtual Machine.
 	"""
