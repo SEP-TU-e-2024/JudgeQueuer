@@ -76,6 +76,8 @@ class AzureVMSS:
 		if (capacity < 5):
 			await azure.set_capacity(capacity + 1, self.avmss_name)
 		
+		# Update vm_dict, vm(s) could have been added
+		self.update_vm_dict()
 			
 	async def reduce_capacity(self):
 		# Decrease capacity of vmss, always keep at least capacity 1
@@ -83,12 +85,11 @@ class AzureVMSS:
 		if (capacity > 1):
 			await azure.set_capacity(capacity - 1, self.avmss_name)
 
-		return vm
-			
+		# Update vm_dict, vm(s) could have been deleted
+		self.update_vm_dict()
 	
 	async def submit_vm(self, vm: VirtualMachineScaleSetVM, judge_request: JudgeRequest) -> JudgeResult:
-		avm = AzureVM(vm)
-		# self.vm_dict[vm.name] = avm
+		avm = self.vm_dict[vm.name]
 		judge_result = await avm.submit(self, judge_request)
 
 		return judge_result
@@ -96,7 +97,11 @@ class AzureVMSS:
 	async def check_available_vm(self, resource_allocation: ResourceSpecification):
 		# Get the list of vms
 		vms = azure.list_vms(self.machine_type, self.avmss_name)
-		
+
+		# Update vm_dict, make sure the dict is up to date
+		self.update_vm_dict()
+
+		# Go over the virtual machine to find one with enough capacity
 		for vm in vms:
 			# Get the azure vm class instance associated to the vm
 			if (self.vm_dict[vm.name]):
@@ -107,8 +112,25 @@ class AzureVMSS:
 				
 				return vm
 		
-		# no vm found
+		# No vm found
 		return None
+	
+	async def update_vm_dict(self):
+		vms = azure.list_vms(self.machine_type, self.avmss_name)
+
+		for vm in vms:
+			# Check if each vm has a AzureVM class stored to it in dict
+			if (not self.vm_dict[vm.name]):
+				# Create and safe vm class
+				avm = AzureVM(vm)
+				self.vm_dict[vm.name] = avm
+
+		for key in self.vm_dict:
+			avm = self.vm_dict[key]
+			# Check if the vms in the dictionary are still alive
+			if (not avm.alive()):
+				# Remove avm from dictionary
+				self.vm_dict.pop(key)
 			
 	async def close(self):
 		azure.delete_vmss(self.machine_type)
@@ -135,4 +157,7 @@ class AzureVM:
 		# TODO: communicate the judge request to the VM and monitor status
 		# TODO: keep track of free resources
 		pass
+
+	async def alive(self):
+		# TODO check if self.vm is actually still alive (decreasing capacity in vmss can remove it, or by calling delete_vm)
 		pass
