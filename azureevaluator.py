@@ -27,7 +27,7 @@ class AzureEvaluator(SubmissionEvaluator):
 		# Then forward call to that.
 		judge_result = await azurevmss.submit(judge_request)
 
-		if (azurevmss.is_empty()):
+		if azurevmss.is_empty():
 			# azurevmss is empty with no vms, close azurevmss
 			azurevmss.close()
 			self.azurevmss_dict.pop(machine_type)
@@ -74,16 +74,18 @@ class AzureVMSS:
 	async def add_capacity(self):
 		# Increase capacity of vmss with an arbitrary max of 5
 		capacity = self.vmss.sku.capacity
-		if (capacity < 5):
+		if capacity < 5:
 			await self.azure.set_capacity(capacity + 1, self.azurevmss_name)
 		
 		# Update vm_dict, vm(s) could have been added
 		self.update_vm_dict()
 			
 	async def reduce_capacity(self):
-		# Decrease capacity of vmss, always keep at least capacity 1
+		# Decrease capacity of vmss
 		capacity = self.vmss.sku.capacity
-		if (capacity > 0):
+
+		# There needs to be capacity to be removed
+		if capacity > 0:
 			await self.azure.set_capacity(capacity - 1, self.azurevmss_name)
 
 		# Update vm_dict, vm(s) could have been deleted
@@ -105,11 +107,11 @@ class AzureVMSS:
 		# Go over the virtual machine to find one with enough capacity
 		for vm in vms:
 			# Get the azure vm class instance associated to the vm
-			if (self.vm_dict[vm.name]):
+			if self.vm_dict[vm.name]:
 				azurevm = self.vm_dict[vm.name]
 			
 			# Check if there is enough free resource capacity on this vm
-			if (azurevm.capacity(resource_allocation)):
+			if azurevm.capacity(resource_allocation):
 				
 				return vm
 		
@@ -121,7 +123,7 @@ class AzureVMSS:
 
 		for vm in vms:
 			# Check if each vm has a AzureVM class stored to it in dict
-			if (not self.vm_dict[vm.name]):
+			if not self.vm_dict[vm.name]:
 				# Create and safe vm class
 				azurevm = AzureVM(vm, self.azure)
 				self.vm_dict[vm.name] = azurevm
@@ -129,22 +131,26 @@ class AzureVMSS:
 		for key in self.vm_dict:
 			azurevm = self.vm_dict[key]
 			# Check if the vms in the dictionary are still alive
-			if (not azurevm.alive()):
+			if not azurevm.alive():
 				# Remove azurevm from dictionary
 				self.vm_dict.pop(key)
 
-	# Check if there are no vms part of this vmss
 	async def is_empty(self) -> bool:
+		"""
+		Check if there are no vms part of this vmss
+		"""
 		self.update_vm_dict()
-		if (self.azurevm_dict):
+		if self.azurevm_dict:
 			# Not empty
 			return False
 		return True
 
-	# Close the vmss and check if no associated vms
 	async def close(self):
+		"""
+		Close the vmss and check if no associated vms
+		"""
 		self.azure.delete_vmss(self.machine_type)
-		if (self.azurevm_dict):
+		if self.azurevm_dict:
 			raise Exception("AzureVMSS was tried to be closed while having associated vms")
 
 class AzureVM:
@@ -162,7 +168,7 @@ class AzureVM:
 		pass
 		# TODO implement check for capacity
 		# Check cpu, gpu and memory capacity of vm and return true if there is enough capacity
-		if (self.free_cpu >= resource_allocation.num_cpu and self.free_gpu >= resource_allocation.num_gpu and self.free_memory >= resource_allocation.num_memory):
+		if self.free_cpu >= resource_allocation.num_cpu and self.free_gpu >= resource_allocation.num_gpu and self.free_memory >= resource_allocation.num_memory:
 			return True
 		
 		return False
