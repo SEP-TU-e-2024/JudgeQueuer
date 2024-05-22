@@ -94,60 +94,9 @@ class Azure:
 		"""
 		return await self.compute_client.virtual_machine_scale_sets.get(self.resource_group_name, name)
 
-
-	async def get_vm_internal_ip(self, vm_name):
-		"""
-		Gets the internal IP of the VM with the specified name.
-
-		This assumes the VM has only one Network Interface, and only 1 IP Configuration on that NIC.
-		"""
-		# TODO maybe use https://learn.microsoft.com/en-us/python/api/azure-mgmt-network/azure.mgmt.network.operations.networkinterfacesoperations?view=azure-python#azure-mgmt-network-operations-networkinterfacesoperations-list-virtual-machine-scale-set-vm-network-interfaces
-		# 	instead
-
-		# Get VM instance
-		vm = await self.compute_client.virtual_machines.get(self.resource_group_name, vm_name)
-
-		# Require exactly 1 network interface on the VM
-		if len(vm.network_profile.network_interfaces) != 1:
-			raise Exception(f'found invalid amount of NICs: {len(vm.network_profile.network_interfaces)}')
-
-		# Get the ID of the NIC
-		network_interface_id = vm.network_profile.network_interfaces[0].id
-		# Extract name from ID
-		network_interface_name = network_interface_id.split('/')[-1]
-
-		# Get NIC instance
-		network_interface = await self.network_client.network_interfaces.get(
-			self.resource_group_name,
-			network_interface_name
-		)
-
-		# Require exactly 1 IP configuration on the VM
-		if len(network_interface.ip_configurations) != 1:
-			raise Exception(f'found invalid amount of IP configurations: {len(network_interface.ip_configurations)}')
-
-		# Get internal (private) IP address
-		internal_ip_address = network_interface.ip_configurations[0].private_ip_address
-		
-		return internal_ip_address
-
 	#
 	# Modification functions
 	#
-
-	# TODO do we really need this?
-	async def create_group(self, resource_group_name, location=DEFAULT_LOCATION):
-		"""
-		Creates a resource group with the given name.
-		"""
-		resource_group = await self.resource_client.resource_groups.create_or_update(
-			resource_group_name,
-			{
-				"location": location
-			}
-		)
-
-		return resource_group
 
 	async def create_vmss(self, vmss_name=VMSS_NAME, location=DEFAULT_LOCATION):
 		"""
