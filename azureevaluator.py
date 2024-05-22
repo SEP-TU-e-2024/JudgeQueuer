@@ -11,6 +11,7 @@ class AzureEvaluator(SubmissionEvaluator):
 	"""
 	An evaluator using Azure Virtual Machine Scale Set.
 	"""
+	# TODO: make sure that we have only 1 MachineType instance per its descriptor, otherwise this dict doesn't work
 	azurevmss_dict: Dict['MachineType', 'AzureVMSS']
 	azure: Azure
 	
