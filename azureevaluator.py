@@ -95,7 +95,7 @@ class AzureVMSS:
 
 		return judge_result
 	
-	async def check_available_vm(self, resource_allocation: ResourceSpecification):
+	async def check_available_vm(self, resource_allocation: ResourceSpecification) -> VirtualMachineScaleSetVM:
 		# Get the list of vms
 		vms = self.azure.list_vms(self.machine_type, self.azurevmss_name)
 
@@ -134,7 +134,7 @@ class AzureVMSS:
 				self.vm_dict.pop(key)
 
 	# Check if there are no vms part of this vmss
-	async def is_empty(self):
+	async def is_empty(self) -> bool:
 		self.update_vm_dict()
 		if (self.azurevm_dict):
 			# Not empty
@@ -158,8 +158,9 @@ class AzureVM:
 		self.free_gpu = 0
 		self.free_memory = 0
 	
-	async def capacity(self, resource_allocation: ResourceSpecification):
+	async def capacity(self, resource_allocation: ResourceSpecification) -> bool:
 		pass
+		# TODO implement check for capacity
 		# Check cpu, gpu and memory capacity of vm and return true if there is enough capacity
 		if (self.free_cpu >= resource_allocation.num_cpu and self.free_gpu >= resource_allocation.num_gpu and self.free_memory >= resource_allocation.num_memory):
 			return True
