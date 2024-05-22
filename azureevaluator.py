@@ -1,3 +1,5 @@
+from typing import Dict
+
 from azure.mgmt.compute.models import VirtualMachineScaleSet, VirtualMachineScaleSetVM
 
 from azurewrap.base import Azure
@@ -9,7 +11,7 @@ class AzureEvaluator(SubmissionEvaluator):
 	"""
 	An evaluator using Azure Virtual Machine Scale Set.
 	"""
-	azurevmss_dict: dict
+	azurevmss_dict: Dict['MachineType', 'AzureVMSS']
 	azure: Azure
 	
 	def __init__(self, azure: Azure):
@@ -43,7 +45,7 @@ class AzureVMSS:
 	"""
 	machine_type: 'MachineType'
 	azurevmss_name: str
-	azurevm_dict: dict
+	azurevm_dict: Dict[str, 'AzureVM']
 	vmss: VirtualMachineScaleSet
 	azure: Azure
 	
