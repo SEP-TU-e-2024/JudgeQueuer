@@ -10,22 +10,27 @@ class AzureEvaluator(SubmissionEvaluator):
 	An evaluator using Azure Virtual Machine Scale Set.
 	"""
 	def __init__(self, azure: Azure):
-		self.vmss_dict = {}
+		self.azurevmss_dict = {}
 		self.azure = azure
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
-		# get the right VMSS, or make one if needed.
+		# Get the right VMSS, or make one if needed.
 		machine_type = judge_request.resource_allocation.machine_type
-		if machine_type in self.vmss_dict:
-			azurevmss = self.vmss_dict[machine_type]
+		if machine_type in self.azurevmss_dict:
+			azurevmss = self.azurevmss_dict[machine_type]
 		else:
 			azurevmss_name = "my-vmssnu_" + machine_type.descriptor
 			vmss = await self.azure.create_vmss(azurevmss_name)
 			azurevmss = AzureVMSS(machine_type, azurevmss_name, vmss, self.azure)
-			self.vmss_dict[machine_type] = azurevmss
+			self.azurevmss_dict[machine_type] = azurevmss
 
 		# Then forward call to that.
 		judge_result = await azurevmss.submit(judge_request)
+
+		if (azurevmss.is_empty()):
+			# azurevmss is empty with no vms, close azurevmss
+			azurevmss.close()
+			self.azurevmss_dict.pop(machine_type)
 
 		return judge_result
 
@@ -66,7 +71,6 @@ class AzureVMSS:
 
 		return judge_result
 
-
 	async def add_capacity(self):
 		# Increase capacity of vmss with an arbitrary max of 5
 		capacity = self.vmss.sku.capacity
@@ -79,7 +83,7 @@ class AzureVMSS:
 	async def reduce_capacity(self):
 		# Decrease capacity of vmss, always keep at least capacity 1
 		capacity = self.vmss.sku.capacity
-		if (capacity > 1):
+		if (capacity > 0):
 			await self.azure.set_capacity(capacity - 1, self.azurevmss_name)
 
 		# Update vm_dict, vm(s) could have been deleted
@@ -128,9 +132,20 @@ class AzureVMSS:
 			if (not azurevm.alive()):
 				# Remove azurevm from dictionary
 				self.vm_dict.pop(key)
-			
+
+	# Check if there are no vms part of this vmss
+	async def is_empty(self):
+		self.update_vm_dict()
+		if (self.azurevm_dict):
+			# Not empty
+			return False
+		return True
+
+	# Close the vmss and check if no associated vms
 	async def close(self):
 		self.azure.delete_vmss(self.machine_type)
+		if (self.azurevm_dict):
+			raise Exception("AzureVMSS was tried to be closed while having associated vms")
 
 class AzureVM:
 	"""
