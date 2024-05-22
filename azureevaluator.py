@@ -121,7 +121,7 @@ class JudgeVMSS:
 		# Go over the virtual machine to find one with enough capacity
 		for vm in vms:
 			# Get the azure vm class instance associated to the vm
-			if self.judgevm_dict[vm.name]:
+			if vm.name in self.judgevm_dict:
 				judgevm = self.judgevm_dict[vm.name]
 			
 			# Check if there is enough free resource capacity on this vm
@@ -137,13 +137,12 @@ class JudgeVMSS:
 
 		for vm in vms:
 			# Check if each vm has a judgevm class stored to it in dict
-			if not self.judgevm_dict[vm.name]:
+			if vm.name not in self.judgevm_dict:
 				# Create and safe vm class
 				judgevm = Judgevm(vm, self.azure)
-				print("added to judgevm_dict with key:" + vm.name)
 				self.judgevm_dict[vm.name] = judgevm
 
-		for key in self.judgevm_dict:
+		for key in list(self.judgevm_dict):
 			judgevm = self.judgevm_dict[key]
 			# Check if the vms in the dictionary are still alive
 			if not await judgevm.alive():
@@ -155,7 +154,7 @@ class JudgeVMSS:
 		Check if there are no vms part of this vmss
 		"""
 		self.update_vm_dict()
-		if self.judgevm_dict:
+		if bool(self.judgevm_dict):
 			# Not empty
 			return False
 		return True
@@ -164,7 +163,7 @@ class JudgeVMSS:
 		"""
 		Close the vmss and check if no associated vms
 		"""
-		if self.judgevm_dict:
+		if bool(self.judgevm_dict):
 			raise Exception("judgevmSS was tried to be closed while having associated vms")
 
 		await self.azure.delete_vmss(self.machine_type)
