@@ -67,7 +67,13 @@ class AzureVMSS:
 				raise Exception("No vm available for judge request, even after adding capacity")
 
 		# Submit using the vm the judge request
-		return await self.submit_vm(vm, judge_request)
+		judge_result = await self.submit_vm(vm, judge_request)
+
+		# Reduce capacity and update vm dict
+		self.reduce_capacity()
+		self.update_vm_dict()
+
+		return judge_result
 
 
 	async def add_capacity(self):
