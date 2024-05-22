@@ -12,7 +12,7 @@ class ResourceSpecification:
 	"""
 	The specification of allocated resources to evaluate a submission.
 	"""
-	num_cpus: int
+	num_cpu: int
 	num_memory: int # in MB
 	num_gpu: int
 	machine_type: 'MachineType'

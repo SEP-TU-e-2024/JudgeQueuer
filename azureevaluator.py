@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 from azurewrap.base import Azure
 from evaluators import SubmissionEvaluator
-from models import JudgeRequest, JudgeResult, MachineType
+from models import JudgeRequest, JudgeResult, MachineType, ResourceSpecification
 
 # Initialize environment variables from the `.env` file
 load_dotenv()
@@ -46,38 +46,40 @@ class AzureVMSS:
 	def __init__(self, machine_type: MachineType, avmss_name: str, vmss):
 		self.machine_type: machine_type
 		self.avmss_name: avmss_name
-		# self.vm_dict = {}
+		self.avm_dict = {}
 		self.vmss = vmss
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
+		resource_allocation = judge_request.resource_allocation
+
 		# Get a right vm that is available
-		vm = self.check_available_vm()
+		vm = self.check_available_vm(resource_allocation)
 
 		# If no available vm than add capacity
 		if vm is None:
 			# Get available vm after the added capacity, error if no available
-			vm = self.add_capacity()
+			self.add_capacity()
+
+			vm = self.check_available_vm(resource_allocation)
+
+			if vm is None:
+				# Throw exception
+				raise Exception("No vm available for judge request, even after adding capacity")
 
 		# Submit using the vm the judge request
 		return await self.submit_vm(vm, judge_request)
 
 
 	async def add_capacity(self):
-
-		vmss = await azure.get_vmss(self.avmss_name)
 		# Increase capacity of vmss with an arbitrary max of 5
-		capacity = vmss.sku.capacity
+		capacity = self.vmss.sku.capacity
 		if (capacity < 5):
 			await azure.set_capacity(capacity + 1, self.avmss_name)
 		
-		vm = self.check_available_vm()
-
-		if vm is None:
-			# TODO throw error
-			return -1
-		
+			
+	async def reduce_capacity(self):
 		# Decrease capacity of vmss, always keep at least capacity 1
-		capacity = vmss.sku.capacity
+		capacity = self.vmss.sku.capacity
 		if (capacity > 1):
 			await azure.set_capacity(capacity - 1, self.avmss_name)
 
@@ -91,13 +93,19 @@ class AzureVMSS:
 
 		return judge_result
 	
-	async def check_available_vm(self):
+	async def check_available_vm(self, resource_allocation: ResourceSpecification):
 		# Get the list of vms
 		vms = azure.list_vms(self.machine_type, self.avmss_name)
 		
 		for vm in vms:
-			# TODO Select a VM with enough capacity
-			return vm
+			# Get the azure vm class instance associated to the vm
+			if (self.vm_dict[vm.name]):
+				avm = self.vm_dict[vm.name]
+			
+			# Check if there is enough free resource capacity on this vm
+			if (avm.capacity(resource_allocation)):
+				
+				return vm
 		
 		# no vm found
 		return None
@@ -111,6 +119,8 @@ class AzureVM:
 	"""
 	def __init__(self, vm):
 		self.vm = vm
+	async def capacity(self, resource_allocation: ResourceSpecification):
+		pass
 
 	async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
 		# TODO: communicate the judge request to the VM and monitor status
