@@ -3,7 +3,9 @@ import os
 
 from dotenv import load_dotenv
 
+from azureevaluator import AzureEvaluator
 from azurewrap import Azure
+from models import JudgeRequest, MachineType, ResourceSpecification, Submission
 
 # Initialize environment variables from the `.env` file
 load_dotenv()
@@ -15,6 +17,24 @@ RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
 azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
 
 async def main():
+	ae = AzureEvaluator(azure)
+
+	# Assign temporary values
+	
+	# Assign submission information
+	submission = Submission(1, "source_url")
+
+	# Assign Machine type
+	machine_type = MachineType("machine_type")
+
+	# Assign resource specification
+	resource_allocation = ResourceSpecification(4, 32, 1, machine_type)
+
+	# Assign Judge request
+	judge_request = JudgeRequest(submission, resource_allocation)
+
+	# Test out submitting judge request
+	print(await ae.submit(judge_request))
 	pass
 
 if __name__ == "__main__":
