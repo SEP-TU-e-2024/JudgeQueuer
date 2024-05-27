@@ -202,6 +202,7 @@ class JudgeVM:
 	def __init__(self, vm: VirtualMachineScaleSetVM, azure: Azure):
 		self.vm = vm
 		self.azure = azure
+		# TODO replace hardcoded values (if possible, get from `vm`)
 		self.free_cpu = 10
 		self.free_gpu = 2
 		self.free_memory = 50
