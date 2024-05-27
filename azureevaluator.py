@@ -140,8 +140,7 @@ class JudgeVMSS:
 		
 			# Check if there is enough free resource capacity on this vm
 			if await judgevm.check_capacity(resource_allocation):
-				
-				return await self.azure.get_vmss(vm_name)
+				return judgevm.vm
 			
 		# No vm found
 		return None
