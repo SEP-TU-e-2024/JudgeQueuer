@@ -115,7 +115,8 @@ class Azure:
 		}
 		computer_name_prefix = "my-vmssnu"
 		admin_username = "azureuser"
-		ssh_key_data = ""
+		# TODO remove hardcoded ssh key
+		ssh_key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDlWaf/jyfJSzi3zJgSw1Z94a0PvCKYobxdicbXnB2pceANiXa2LIgec8axVWyCcdpdObHHjHixur3/K9qDGytD19J/4+kqP9jAp52Mlw2vumfAX4xy52ygUH+9YDZAn0j/dmCuf5bfqJ18pacbRp9XtN4dXSmPVyXLxYgIb4hJauMdNOLTCf0p18HZCHhyOIYungi0iEZg52vgoM6Db73MpxgXyn1/HHZNK24IBgj/5mIzu4jyssc3VU/ujh9UqljIMQsCn5ANyrBjh4E0Rwmgp3iR4DAwK/s45dbvubG0ZwRKrWdSQsxPfsjEGFI8YStuxu4HX9pOYfTjljcrobkHRbwO9l4MKp4VmvVXXw65zfKpqN/ee+9eLAxZkkaf/V1Xb//Sr/Jh0ikcPhl1am56CnAhWPI7eQL6fwHBt+Xvhz9MNlJX6p8j6rxHrjYmUDaH1fIfBa4oUTqs8fkLpJDYLhbnnHOspq4NRY/cNnWLh/ACiJTLnmuroCmPazL+ZJk= generated-by-azure"
 
 		image = {
 			"publisher": "canonical",

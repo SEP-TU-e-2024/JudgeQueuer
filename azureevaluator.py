@@ -110,6 +110,7 @@ class JudgeVMSS:
 
 		# There needs to be capacity to be removed
 		if capacity > 0:
+			# TODO can be unsafe as it can remove a vm that is bussy
 			await self.azure.set_capacity(capacity - 1, self.judgevmss_name)
 
 		# Update vm_dict, vm(s) could have been deleted
@@ -129,22 +130,18 @@ class JudgeVMSS:
 		Goes through list of vms in this vmss and checks whether they have enough capacity to take on the resource allocation.
 		Returns a vm with enough capacity or None if there is none.
 		"""
-		# Get the list of vms
-		vms = await self.azure.list_vms(self.judgevmss_name)
 
 		# Update vm_dict, make sure the dict is up to date
 		await self.__update_vm_dict()
 
-		# Go over the virtual machine to find one with enough capacity
-		for vm in vms:
-			# Get the azure vm class instance associated to the vm
-			if vm.name in self.judgevm_dict:
-				judgevm = self.judgevm_dict[vm.name]
-			
-				# Check if there is enough free resource capacity on this vm
-				if await judgevm.check_capacity(resource_allocation):
-					
-					return vm
+		# Get the azure vm class instance associated to the vm
+		for vm_name in self.judgevm_dict:
+			judgevm = self.judgevm_dict[vm_name]
+		
+			# Check if there is enough free resource capacity on this vm
+			if await judgevm.check_capacity(resource_allocation):
+				
+				return self.judgevm_dict[vm_name]
 			
 		# No vm found
 		return None
@@ -175,7 +172,7 @@ class JudgeVMSS:
 		Check if there are no vms part of this vmss
 		"""
 		await self.__update_vm_dict()
-		if len(list(self.judgevm_dict)) > 0:
+		if len(self.judgevm_dict) > 0:
 			# Not empty
 			return False
 		return True
@@ -184,8 +181,8 @@ class JudgeVMSS:
 		"""
 		Close the vmss and check if no associated vms
 		"""
-		if len(list(self.judgevm_dict)) <= 0:
-			raise Exception("judgevmSS was tried to be closed while having associated vms in dict:")
+		if self.is_empty():
+			raise Exception("judgevmSS was tried to be closed while having associated vms in dict")
 
 		await self.azure.delete_vmss(self.machine_type)
 
@@ -201,6 +198,7 @@ class JudgeVM:
 
 	def __init__(self, vm: VirtualMachineScaleSetVM, azure: Azure):
 		self.vm = vm
+		# TODO keep track of whether this vm can be deleted (or is bussy)
 		self.azure = azure
 		# TODO replace hardcoded values (if possible, get from `vm`)
 		self.free_cpu = 10
