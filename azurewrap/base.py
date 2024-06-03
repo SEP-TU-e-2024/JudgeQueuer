@@ -116,7 +116,7 @@ class Azure:
 		computer_name_prefix = "my-vmssnu"
 		admin_username = "azureuser"
 		# TODO remove hardcoded ssh key
-		ssh_key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDlWaf/jyfJSzi3zJgSw1Z94a0PvCKYobxdicbXnB2pceANiXa2LIgec8axVWyCcdpdObHHjHixur3/K9qDGytD19J/4+kqP9jAp52Mlw2vumfAX4xy52ygUH+9YDZAn0j/dmCuf5bfqJ18pacbRp9XtN4dXSmPVyXLxYgIb4hJauMdNOLTCf0p18HZCHhyOIYungi0iEZg52vgoM6Db73MpxgXyn1/HHZNK24IBgj/5mIzu4jyssc3VU/ujh9UqljIMQsCn5ANyrBjh4E0Rwmgp3iR4DAwK/s45dbvubG0ZwRKrWdSQsxPfsjEGFI8YStuxu4HX9pOYfTjljcrobkHRbwO9l4MKp4VmvVXXw65zfKpqN/ee+9eLAxZkkaf/V1Xb//Sr/Jh0ikcPhl1am56CnAhWPI7eQL6fwHBt+Xvhz9MNlJX6p8j6rxHrjYmUDaH1fIfBa4oUTqs8fkLpJDYLhbnnHOspq4NRY/cNnWLh/ACiJTLnmuroCmPazL+ZJk= generated-by-azure"
+		ssh_key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDDUKfFGpdsPyuxaINX5nNfWKMIR0pjZia8kfcsC6tC27zyLYogLQ5eIEhHXofnExmlfiD6R5rtclYhF3Q33VVaJeVg+KtN/Wx/t4REIiCVsI98wFZUWGnXuq6yuAC3GGfLfIqrOfz1/xKwbk+Swj3u4YIXpfT0yLhCXpwmni178qHn02vkd2BlytOTYcyMFiXCnN9uBA2MNu85LMqqL4hHg+HjOCDOivsTlswGt6kd8kfq04eADGgUCOMy2XQk53iD2PgK0gCQxKQlq/ACHMs5fOUFIT8jpYxXmIqT5Y/p1pEPWS3w37t/wD+QHllPbTvTLkCEksPRQr0RMFUj7Ov8/sAdbh1lBidmShWP7txJyVPby1+SVv/dO7Ghpyl58SYC9Zu1oLy8WCmPNE3aTFqTtHwJiGivI4Ymq/lHLNPUrhzzLU6Ek+SaAqre8rMv6D+Ap7tNDmigQdtkDpxNahhj8vFdKdUR1BtF3TsHa/uQRv111jVULi9Uz89Arjdpc9HvRnhI8x2ecIt7pEAfDfxl5i/GaiD5d0F+c6k8WSh2ZBlXbVHcPlGMwWPaaIVok9ghjV7vWn9xN7kM8SR4axf9HPMnGhFBLJp37JBE1TRynVqlUzDo2vCBvGBbYJ6b9ERnuQMHNNqcAguzkQiHqfWTg8vQ1KmhK7wYD6KwysglNQ== tue\20212025@S20212025"
 
 		image = {
 			"publisher": "canonical",
@@ -127,11 +127,12 @@ class Azure:
 		disk_size = 30
 		disk_type = "StandardSSD_LRS"
 
-		nic_name = "SEP-test-VM-vnet-nic01"
-		nic_nsg_id = "/subscriptions/f5e3b6a6-eff0-49d0-911a-b4272870801d/resourceGroups/VMSS-test-repo/providers/Microsoft.Network/networkSecurityGroups/basicNsgSEP-test-VM-vnet-nic01"
-		nic_ip_name = "SEP-test-VM-vnet-nic01-defaultIpConfiguration"
-		nic_ip_subnet_id = "/subscriptions/f5e3b6a6-eff0-49d0-911a-b4272870801d/resourceGroups/SEP-tests/providers/Microsoft.Network/virtualNetworks/SEP-test-VM-vnet/subnets/default"
-		nic_ip_public_name = "publicIp-SEP-test-VM-vnet-nic01"
+		nic_name = "judge-queuer-vnet-nic01"
+		nic_nsg_id = "/subscriptions/43d25139-b8b0-497c-9acf-9af450da2d53/resourceGroups/judge-queuer/providers/Microsoft.Network/networkSecurityGroups/basicNsgjudge-queuer-vnet-nic01"
+		nic_ip_name = "judge-queuer-vnet-nic01-defaultIpConfiguration"
+		nic_ip_subnet_id = "/subscriptions/43d25139-b8b0-497c-9acf-9af450da2d53/resourceGroups/judge-queuer/providers/Microsoft.Network/virtualNetworks/judge-queuer-vnet/subnets/default"
+		nic_ip_public_name = "publicIp-judge-queuer-vnet-nic01"
+		application_id = "/subscriptions/43d25139-b8b0-497c-9acf-9af450da2d53/resourceGroups/BenchLab/providers/Microsoft.Compute/galleries/runner_container_gallery/applications/runner_container_application/versions/0.0.41"
 
 
 		# Fill parameters in template
@@ -143,6 +144,7 @@ class Azure:
 		storage_profile = vm_profile["storageProfile"]
 		nic_config = vm_profile["networkProfile"]["networkInterfaceConfigurations"][0]
 		nic_ip_config = nic_config["properties"]["ipConfigurations"][0]
+		gallery_application = vm_profile["applicationProfile"]["galleryApplications"][0]
 		
 		os_profile["computerNamePrefix"] = computer_name_prefix
 		os_profile["adminUsername"] = admin_username
@@ -158,6 +160,8 @@ class Azure:
 		nic_ip_config["name"] = nic_ip_name
 		nic_ip_config["properties"]["subnet"]["id"] = nic_ip_subnet_id
 		nic_ip_config["properties"]["publicIPAddressConfiguration"]["name"] = nic_ip_public_name
+
+		gallery_application["packageReferenceId"] = application_id
 
 		poller: AsyncLROPoller = await self.compute_client.virtual_machine_scale_sets.begin_create_or_update(self.resource_group_name, vmss_name, params)
 

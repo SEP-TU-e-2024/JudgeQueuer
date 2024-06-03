@@ -10,8 +10,6 @@
 		},
 		"virtualMachineProfile":{
 			"osProfile":{
-				"computerNamePrefix":"my-vmssnu",
-				"adminUsername":"azureuser",
 				"linuxConfiguration":{
 					"ssh":{
 						"publicKeys":[
@@ -38,6 +36,15 @@
 					}
 				}
 			},
+			"applicationProfile": {
+                "galleryApplications": [
+                    {
+                        "manuallyManaged": false,
+                        "treatFailureAsDeploymentFailure": true,
+                        "enableAutomaticUpgrade": false
+                    }
+                ]
+            },
 			"networkProfile":{
 				"networkInterfaceConfigurations":[
 					{
