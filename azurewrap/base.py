@@ -1,6 +1,7 @@
 import json
 from typing import List
 
+from azure.core.credentials_async import AsyncTokenCredential
 from azure.core.polling import AsyncLROPoller
 from azure.identity.aio import DefaultAzureCredential
 from azure.mgmt.compute.aio import ComputeManagementClient
@@ -20,6 +21,13 @@ class Azure:
 	"""
 	A manager for Azure clients and credentials.
 	"""
+	credentials: AsyncTokenCredential
+	compute_client: ComputeManagementClient
+	network_client: NetworkManagementClient
+	resource_client: ResourceManagementClient
+	
+	resource_group_name: str
+	subscription_id: str
 
 	def __init__(self, subscription_id: str, resource_group_name: str):
 		self.credentials = DefaultAzureCredential()
@@ -28,6 +36,7 @@ class Azure:
 		self.network_client = NetworkManagementClient(self.credentials, subscription_id)
 		self.resource_client = ResourceManagementClient(self.credentials, subscription_id)
 
+		self.subscription_id = subscription_id
 		self.resource_group_name = resource_group_name
 
 	async def list_skus(self, resource_type, location=DEFAULT_LOCATION):
@@ -98,47 +107,59 @@ class Azure:
 	# Modification functions
 	#
 
-	async def create_vmss(self, vmss_name=VMSS_NAME, location=DEFAULT_LOCATION):
+	async def create_vmss(
+		self,
+		vmss_name,
+		location=DEFAULT_LOCATION,
+		
+		machine_type_name="Standard_B1s",
+		machine_type_kind="Standard",
+		disk_type="StandardSSD_LRS",
+		disk_size=30,
+		
+		computer_name_prefix="benchlab-judge-runner",
+		admin_username="benchlab",
+		
+		nic_name="benchlab-judge-nic",
+		nic_ip_name="benchlab-judge-nic-ip",
+		nic_ip_public_name="benchlab-judge-nic-public-ip",
+
+		# TODO: auto generate NSG & virtual network?
+		application_resource_group_name="BenchLab",
+		application_gallery="runner_container_gallery",
+		application_definition="runner_container_application",
+		application_version="latest",
+		nsg_name="basicNsgjudge-queuer-vnet-nic01",
+		virtual_network_name="judge-queuer-vnet",
+		virtual_network_subnet="default",
+	):
 		"""
 		Creates a VMSS.
 		"""
 		with open("vmss_template.json", "r") as template_file:
 			params = json.load(template_file)
-		
-		# TODO: add params to function, improve parameter construction (e.g. IDs)
-		# All parameters
-		location = location
+
+		# Hardware information
 		sku = {
-			"name": "Standard_B1s",
-			"tier": "Standard",
+			"name": machine_type_name,
+			"tier": machine_type_kind,
 			"capacity": 0
 		}
-		computer_name_prefix = "my-vmssnu"
-		admin_username = "azureuser"
-		# TODO remove hardcoded ssh key
-		ssh_key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDDUKfFGpdsPyuxaINX5nNfWKMIR0pjZia8kfcsC6tC27zyLYogLQ5eIEhHXofnExmlfiD6R5rtclYhF3Q33VVaJeVg+KtN/Wx/t4REIiCVsI98wFZUWGnXuq6yuAC3GGfLfIqrOfz1/xKwbk+Swj3u4YIXpfT0yLhCXpwmni178qHn02vkd2BlytOTYcyMFiXCnN9uBA2MNu85LMqqL4hHg+HjOCDOivsTlswGt6kd8kfq04eADGgUCOMy2XQk53iD2PgK0gCQxKQlq/ACHMs5fOUFIT8jpYxXmIqT5Y/p1pEPWS3w37t/wD+QHllPbTvTLkCEksPRQr0RMFUj7Ov8/sAdbh1lBidmShWP7txJyVPby1+SVv/dO7Ghpyl58SYC9Zu1oLy8WCmPNE3aTFqTtHwJiGivI4Ymq/lHLNPUrhzzLU6Ek+SaAqre8rMv6D+Ap7tNDmigQdtkDpxNahhj8vFdKdUR1BtF3TsHa/uQRv111jVULi9Uz89Arjdpc9HvRnhI8x2ecIt7pEAfDfxl5i/GaiD5d0F+c6k8WSh2ZBlXbVHcPlGMwWPaaIVok9ghjV7vWn9xN7kM8SR4axf9HPMnGhFBLJp37JBE1TRynVqlUzDo2vCBvGBbYJ6b9ERnuQMHNNqcAguzkQiHqfWTg8vQ1KmhK7wYD6KwysglNQ== tue\20212025@S20212025"
 
-		image = {
+		# OS related information
+		os_image = {
 			"publisher": "canonical",
 			"offer": "0001-com-ubuntu-server-jammy",
 			"sku": "22_04-lts-gen2",
 			"version": "latest"
 		}
-		disk_size = 30
-		disk_type = "StandardSSD_LRS"
+		ssh_key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDDUKfFGpdsPyuxaINX5nNfWKMIR0pjZia8kfcsC6tC27zyLYogLQ5eIEhHXofnExmlfiD6R5rtclYhF3Q33VVaJeVg+KtN/Wx/t4REIiCVsI98wFZUWGnXuq6yuAC3GGfLfIqrOfz1/xKwbk+Swj3u4YIXpfT0yLhCXpwmni178qHn02vkd2BlytOTYcyMFiXCnN9uBA2MNu85LMqqL4hHg+HjOCDOivsTlswGt6kd8kfq04eADGgUCOMy2XQk53iD2PgK0gCQxKQlq/ACHMs5fOUFIT8jpYxXmIqT5Y/p1pEPWS3w37t/wD+QHllPbTvTLkCEksPRQr0RMFUj7Ov8/sAdbh1lBidmShWP7txJyVPby1+SVv/dO7Ghpyl58SYC9Zu1oLy8WCmPNE3aTFqTtHwJiGivI4Ymq/lHLNPUrhzzLU6Ek+SaAqre8rMv6D+Ap7tNDmigQdtkDpxNahhj8vFdKdUR1BtF3TsHa/uQRv111jVULi9Uz89Arjdpc9HvRnhI8x2ecIt7pEAfDfxl5i/GaiD5d0F+c6k8WSh2ZBlXbVHcPlGMwWPaaIVok9ghjV7vWn9xN7kM8SR4axf9HPMnGhFBLJp37JBE1TRynVqlUzDo2vCBvGBbYJ6b9ERnuQMHNNqcAguzkQiHqfWTg8vQ1KmhK7wYD6KwysglNQ== tue\20212025@S20212025"
+		# TODO remove hardcoded ssh key
 
-		nic_name = "judge-queuer-vnet-nic01"
-		nic_nsg_id = "/subscriptions/43d25139-b8b0-497c-9acf-9af450da2d53/resourceGroups/judge-queuer/providers/Microsoft.Network/networkSecurityGroups/basicNsgjudge-queuer-vnet-nic01"
-		nic_ip_name = "judge-queuer-vnet-nic01-defaultIpConfiguration"
-		nic_ip_subnet_id = "/subscriptions/43d25139-b8b0-497c-9acf-9af450da2d53/resourceGroups/judge-queuer/providers/Microsoft.Network/virtualNetworks/judge-queuer-vnet/subnets/default"
-		nic_ip_public_name = "publicIp-judge-queuer-vnet-nic01"
-		application_id = "/subscriptions/43d25139-b8b0-497c-9acf-9af450da2d53/resourceGroups/BenchLab/providers/Microsoft.Compute/galleries/runner_container_gallery/applications/runner_container_application/versions/0.0.41"
-
-
-		# Fill parameters in template
+		# Add parameters to template
 		params["location"] = location
 		params["sku"] = sku
-		
+
 		vm_profile = params["properties"]["virtualMachineProfile"]
 		os_profile = vm_profile["osProfile"]
 		storage_profile = vm_profile["storageProfile"]
@@ -151,17 +172,17 @@ class Azure:
 		os_profile["linuxConfiguration"]["ssh"]["publicKeys"][0]["path"] = f"/home/{admin_username}/.ssh/authorized_keys"
 		os_profile["linuxConfiguration"]["ssh"]["publicKeys"][0]["keyData"] = ssh_key_data
 
-		storage_profile["imageReference"] = image
+		storage_profile["imageReference"] = os_image
 		storage_profile["osDisk"]["diskSizeGB"] = disk_size
 		storage_profile["osDisk"]["managedDisk"]["storageAccountType"] = disk_type
 
 		nic_config["name"] = nic_name
-		nic_config["properties"]["networkSecurityGroup"]["id"] = nic_nsg_id
+		nic_config["properties"]["networkSecurityGroup"]["id"] = f"/subscriptions/{self.subscription_id}/resourceGroups/{self.resource_group_name}/providers/Microsoft.Network/networkSecurityGroups/{nsg_name}"
 		nic_ip_config["name"] = nic_ip_name
-		nic_ip_config["properties"]["subnet"]["id"] = nic_ip_subnet_id
+		nic_ip_config["properties"]["subnet"]["id"] = f"/subscriptions/{self.subscription_id}/resourceGroups/{self.resource_group_name}/providers/Microsoft.Network/virtualNetworks/{virtual_network_name}/subnets/{virtual_network_subnet}"
 		nic_ip_config["properties"]["publicIPAddressConfiguration"]["name"] = nic_ip_public_name
 
-		gallery_application["packageReferenceId"] = application_id
+		gallery_application["packageReferenceId"] = f"/subscriptions/{self.subscription_id}/resourceGroups/{application_resource_group_name}/providers/Microsoft.Compute/galleries/{application_gallery}/applications/{application_definition}/versions/{application_version}"
 
 		poller: AsyncLROPoller = await self.compute_client.virtual_machine_scale_sets.begin_create_or_update(self.resource_group_name, vmss_name, params)
 

@@ -25,7 +25,7 @@ async def main():
 	submission = Submission(1, "source_url")
 
 	# Assign Machine type
-	machine_type = MachineType("machine_type")
+	machine_type = MachineType("machine_type2")
 
 	# Assign resource specification
 	resource_allocation = ResourceSpecification(4, 32, 1, machine_type)
@@ -35,13 +35,30 @@ async def main():
 
 	# Test out submitting judge request
 	print(await ae.submit(judge_request))
-	pass
+
+async def main2():
+	print('Starting')
+	vmss_name = 'mytestvmss_11'
+
+	await azure.create_vmss(vmss_name)
+	print('Created VMSS')
+
+	for i in range(1):
+		print(f'-- Iteration: {i}')
+		try:
+			await azure.set_capacity(1, vmss_name)
+			print(f'-- Created VM {i} successfully')
+		except Exception as e:
+			print(f'-- Failed to create VM {i}')
+			print(e)
+
+		# await azure.set_capacity(0, vmss_name)
 
 if __name__ == "__main__":
 	# Wrap main to make sure all Azure objects are closed properly
 	async def wrap_main():
 		try:
-			await main()
+			await main2()
 		finally:
 			await azure.close()
 	
