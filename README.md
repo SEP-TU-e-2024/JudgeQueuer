@@ -13,6 +13,10 @@ AZURE_RESOURCE_GROUP_NAME = "my-resource-group-name"
 AZURE_NSG_NAME = "my-nsg-name"
 AZURE_VNET_NAME = "my-vnet-name"
 AZURE_VNET_SUBNET_NAME = "default"
+AZURE_VMAPP_RESOURCE_GROUP = "my-resource-group-name"
+AZURE_VMAPP_GALLERY = "my-gallery-name"
+AZURE_VMAPP_NAME = "my-app-name"
+AZURE_VMAPP_VERSION = "latest"
 ```
 
 To find your subscription ID, go to the Subscriptions page on the Azure portal. Here, select the subscription which you want the system to operate under, and it will say the Subscription ID at the top of the page.
@@ -22,6 +26,8 @@ For the Resource Group name, you can make a new resource group for working on th
 Go to the Network Security Groups page, and create a new NSG with a name of your choosing, which you should add to the `.env` file as 'AZURE_NSG_NAME'. Make sure you add it to the right resource group and region.
 
 Go to the Virtual Networks page, and create a new Vnet with a name (which you should add to the 'AZURE_VNET_NAME' in the `.env` file). Most settings can be left at the default. If you do change the subnet name, make sure you change the corresponding 'AZURE_VNET_SUBNET_NAME' in `.env`.
+
+Furthermore, you need to import some settings that were used to create the VM Application on the Judge Runner side. This are filled into the `.env` file under `AZURE_VMAPP_...`, and you should use the same values as defined when creating the VM Application.
 
 ### Azure Authentication
 You need to somehow provide authentication for your Azure instance. See [Azure Python SDK documentation](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for the available options in this regard.

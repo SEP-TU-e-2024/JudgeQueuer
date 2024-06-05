@@ -14,6 +14,11 @@ load_dotenv()
 NSG_NAME = os.getenv("AZURE_NSG_NAME")
 VNET_NAME = os.getenv("AZURE_VNET_NAME")
 VNET_SUBNET_NAME = os.getenv("AZURE_VNET_SUBNET_NAME")
+VMAPP_RESOURCE_GROUP = os.getenv("AZURE_VMAPP_RESOURCE_GROUP")
+VMAPP_GALLERY = os.getenv("AZURE_VMAPP_GALLERY")
+VMAPP_NAME = os.getenv("AZURE_VMAPP_NAME")
+VMAPP_VERSION = os.getenv("AZURE_VMAPP_VERSION")
+
 
 class AzureEvaluator(SubmissionEvaluator):
 	"""
@@ -41,6 +46,10 @@ class AzureEvaluator(SubmissionEvaluator):
 			await self.azure.create_vmss(judgevmss_name,
 				machine_type_name=machine_type.name,
 				machine_type_tier=machine_type.tier,
+				application_resource_group_name=VMAPP_RESOURCE_GROUP,
+				application_gallery=VMAPP_GALLERY,
+				application_definition=VMAPP_NAME,
+				application_version=VMAPP_VERSION,
 				nsg_name=NSG_NAME,
 				virtual_network_name=VNET_NAME,
 				virtual_network_subnet=VNET_SUBNET_NAME

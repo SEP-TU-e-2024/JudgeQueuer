@@ -124,10 +124,10 @@ class Azure:
 		nic_ip_public_name="benchlab-judge-nic-public-ip",
 
 		# TODO: auto generate NSG & virtual network?
-		application_resource_group_name="BenchLab",
-		application_gallery="runner_container_gallery",
-		application_definition="runner_container_application",
-		application_version="latest",
+		application_resource_group_name="BenchLab123",
+		application_gallery="runner_container_gallery123",
+		application_definition="runner_container_application123",
+		application_version="latest123",
 		nsg_name="judge-queuer-nsg123",
 		virtual_network_name="judge-queuer-vnet123",
 		virtual_network_subnet="default123",
