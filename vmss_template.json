@@ -37,14 +37,14 @@
 				}
 			},
 			"applicationProfile": {
-                "galleryApplications": [
-                    {
-                        "manuallyManaged": false,
-                        "treatFailureAsDeploymentFailure": true,
-                        "enableAutomaticUpgrade": false
-                    }
-                ]
-            },
+				"galleryApplications": [
+					{
+						"manuallyManaged": false,
+						"treatFailureAsDeploymentFailure": true,
+						"enableAutomaticUpgrade": false
+					}
+				]
+			},
 			"networkProfile":{
 				"networkInterfaceConfigurations":[
 					{

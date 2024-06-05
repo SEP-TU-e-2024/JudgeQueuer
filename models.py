@@ -6,10 +6,12 @@ class MachineType:
 	A type of machine.
 	"""
 	# TODO: improve description
-	descriptor: str
+	name: str
+	tier: str
 
-	def __init__(self, descriptor: str):
-		self.descriptor = descriptor
+	def __init__(self, name: str, tier: str):
+		self.name = name
+		self.tier = tier
 
 class ResourceSpecification:
 	"""

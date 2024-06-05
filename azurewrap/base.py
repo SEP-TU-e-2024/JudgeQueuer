@@ -62,9 +62,8 @@ class Azure:
 
 	async def list_machine_types(self, location=DEFAULT_LOCATION):
 		"""
-		Lists all the disk types, such as 'Standard_B1s'.
+		Lists all the machine types, such as 'Standard_B1s'.
 		"""
-		# return await self.list_sku_names('virtualMachines', location)
 		return await self.list_sku_names("virtualMachines", location)
 
 	async def list_disk_types(self, location=DEFAULT_LOCATION) -> List["str"]:
@@ -113,7 +112,7 @@ class Azure:
 		location=DEFAULT_LOCATION,
 		
 		machine_type_name="Standard_B1s",
-		machine_type_kind="Standard",
+		machine_type_tier="Standard",
 		disk_type="StandardSSD_LRS",
 		disk_size=30,
 		
@@ -129,9 +128,9 @@ class Azure:
 		application_gallery="runner_container_gallery",
 		application_definition="runner_container_application",
 		application_version="latest",
-		nsg_name="basicNsgjudge-queuer-vnet-nic01",
-		virtual_network_name="judge-queuer-vnet",
-		virtual_network_subnet="default",
+		nsg_name="judge-queuer-nsg123",
+		virtual_network_name="judge-queuer-vnet123",
+		virtual_network_subnet="default123",
 	):
 		"""
 		Creates a VMSS.
@@ -142,7 +141,7 @@ class Azure:
 		# Hardware information
 		sku = {
 			"name": machine_type_name,
-			"tier": machine_type_kind,
+			"tier": machine_type_tier,
 			"capacity": 0
 		}
 

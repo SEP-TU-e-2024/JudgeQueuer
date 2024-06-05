@@ -1,11 +1,19 @@
+import os
 from typing import Dict
 
 from azure.mgmt.compute.models import VirtualMachineScaleSet, VirtualMachineScaleSetVM
+from dotenv import load_dotenv
 
 from azurewrap.base import Azure
 from evaluators import SubmissionEvaluator
 from models import JudgeRequest, JudgeResult, MachineType, ResourceSpecification
 
+# Initialize environment variables from the `.env` file
+load_dotenv()
+
+NSG_NAME = os.getenv("AZURE_NSG_NAME")
+VNET_NAME = os.getenv("AZURE_VNET_NAME")
+VNET_SUBNET_NAME = os.getenv("AZURE_VNET_SUBNET_NAME")
 
 class AzureEvaluator(SubmissionEvaluator):
 	"""
@@ -28,8 +36,16 @@ class AzureEvaluator(SubmissionEvaluator):
 		if machine_type in self.judgevmss_dict:
 			judgevmss = self.judgevmss_dict[machine_type]
 		else:
-			judgevmss_name = "benchlab_judge_" + machine_type.descriptor
-			await self.azure.create_vmss(judgevmss_name)
+			judgevmss_name = "benchlab_judge_" + machine_type.name
+			
+			await self.azure.create_vmss(judgevmss_name,
+				machine_type_name=machine_type.name,
+				machine_type_tier=machine_type.tier,
+				nsg_name=NSG_NAME,
+				virtual_network_name=VNET_NAME,
+				virtual_network_subnet=VNET_SUBNET_NAME
+			)
+
 			vmss = await self.azure.get_vmss(judgevmss_name)
 			judgevmss = JudgeVMSS(machine_type, judgevmss_name, vmss, self.azure)
 			self.judgevmss_dict[machine_type] = judgevmss
