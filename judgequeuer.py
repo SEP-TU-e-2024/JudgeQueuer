@@ -25,7 +25,9 @@ async def main():
 	submission = Submission(1, "source_url")
 
 	# Assign Machine type
-	machine_type = MachineType("machine_type")
+	machine_type = MachineType("Standard_B1s", "Standard")
+	# machine_type = MachineType("Standard_D2s_v3", "Standard")
+	# machine_type = MachineType("Standard_D4s_v3", "Standard")
 
 	# Assign resource specification
 	resource_allocation = ResourceSpecification(4, 32, 1, machine_type)
@@ -34,8 +36,8 @@ async def main():
 	judge_request = JudgeRequest(submission, resource_allocation)
 
 	# Test out submitting judge request
+	print("Submitting judge request...")
 	print(await ae.submit(judge_request))
-	pass
 
 if __name__ == "__main__":
 	# Wrap main to make sure all Azure objects are closed properly

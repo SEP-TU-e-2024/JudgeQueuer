@@ -10,8 +10,6 @@
 		},
 		"virtualMachineProfile":{
 			"osProfile":{
-				"computerNamePrefix":"my-vmssnu",
-				"adminUsername":"azureuser",
 				"linuxConfiguration":{
 					"ssh":{
 						"publicKeys":[
@@ -37,6 +35,15 @@
 						"storageAccountType":"StandardSSD_LRS"
 					}
 				}
+			},
+			"applicationProfile": {
+				"galleryApplications": [
+					{
+						"manuallyManaged": false,
+						"treatFailureAsDeploymentFailure": true,
+						"enableAutomaticUpgrade": false
+					}
+				]
 			},
 			"networkProfile":{
 				"networkInterfaceConfigurations":[
