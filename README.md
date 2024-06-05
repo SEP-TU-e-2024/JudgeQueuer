@@ -27,7 +27,7 @@ Go to the Network Security Groups page, and create a new NSG with a name of your
 
 Go to the Virtual Networks page, and create a new Vnet with a name (which you should add to the 'AZURE_VNET_NAME' in the `.env` file). Most settings can be left at the default. If you do change the subnet name, make sure you change the corresponding 'AZURE_VNET_SUBNET_NAME' in `.env`.
 
-Furthermore, you need to import some settings that were used to create the VM Application on the Judge Runner side. This are filled into the `.env` file under `AZURE_VMAPP_...`, and you should use the same values as defined when creating the VM Application.
+Furthermore, you need to import some settings that were used to create the VM Application on the Judge Runner side. These are filled into the `.env` file under `AZURE_VMAPP_...`, and you should use the same values as defined when creating the VM Application.
 
 Note that all values of the `.env` file filled in above are good for the current development setup.
 
