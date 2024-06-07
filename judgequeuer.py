@@ -39,7 +39,7 @@ async def main():
     ae = AzureEvaluator(azure)
 
     # Assign temporary values
-    
+
     # Assign submission information
     submission = Submission(1, "source_url")
 
@@ -73,7 +73,7 @@ if __name__ == "__main__":
             await main()
         finally:
             await azure.close()
-    
+
     # Run the main wrapper async
     asyncio.run(wrap_main())
 
