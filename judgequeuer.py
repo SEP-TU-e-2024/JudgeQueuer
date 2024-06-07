@@ -36,11 +36,10 @@ def estabish_connection():
 
 async def main():
     threading.Thread(target=estabish_connection, daemon=True).start()
-
     ae = AzureEvaluator(azure)
 
     # Assign temporary values
-
+    
     # Assign submission information
     submission = Submission(1, "source_url")
 
@@ -59,6 +58,13 @@ async def main():
     print("Submitting judge request...")
     print(await ae.submit(judge_request))
 
+    # Assign Judge request
+    judge_request = JudgeRequest(submission, resource_allocation)
+
+    # Test out submitting judge request
+    print("Submitting judge request...")
+    print(await ae.submit(judge_request))
+
 
 if __name__ == "__main__":
     # Wrap main to make sure all Azure objects are closed properly
@@ -67,6 +73,9 @@ if __name__ == "__main__":
             await main()
         finally:
             await azure.close()
+    
+    # Run the main wrapper async
+    asyncio.run(wrap_main())
 
     # Run the main wrapper async
     asyncio.run(wrap_main())
