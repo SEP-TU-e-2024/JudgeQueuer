@@ -36,13 +36,17 @@ class AzureEvaluator(SubmissionEvaluator):
         """
         Handles finding, creating and deletion of vmss that is appropriate for this judgeRequest.
         """
+        # TODO TP rm
+        print("Submitting judge request")
+
         # Get the right VMSS, or make one if needed.
-        machine_type = judge_request.resource_allocation.machine_type
+        machine_type = judge_request.resource_specification.machine_type
         if machine_type in self.judgevmss_dict:
             judgevmss = self.judgevmss_dict[machine_type]
         else:
             judgevmss_name = "benchlab_judge_" + machine_type.name
-            
+
+            print("Creating VMSS")
             await self.azure.create_vmss(judgevmss_name,
                 machine_type_name=machine_type.name,
                 machine_type_tier=machine_type.tier,
@@ -90,7 +94,10 @@ class JudgeVMSS:
         """
         Handle the request for this machine type vmss, an available vm will be found/created and assigned.
         """
-        resource_allocation = judge_request.resource_allocation
+        resource_allocation = judge_request.resource_specification
+
+        # TODO TP rm
+        print(f"submitting on VMSS {self.vmss.name}")
 
         # Get a right vm that is available
         vm = await self.check_available_vm(resource_allocation)
@@ -110,8 +117,8 @@ class JudgeVMSS:
         judge_result = await self.submit_vm(vm, judge_request)
 
         # Reduce capacity and update vm dict
-        await self.reduce_capacity()
-        await self.__update_vm_dict()
+        # await self.reduce_capacity()
+        # await self.__update_vm_dict()
 
         return judge_result
 
@@ -244,6 +251,10 @@ class JudgeVM:
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
         # TODO: communicate the judge request to the VM and monitor status
         # TODO: keep track of free resources
+
+        # TODO TP rm
+        print(f"submitting on VM {self.vm.name}")
+
         pass
 
     async def alive(self):
