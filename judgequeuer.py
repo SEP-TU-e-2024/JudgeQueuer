@@ -20,6 +20,7 @@ SUBSCRIPTION_ID = os.getenv("AZURE_SUBSCRIPTION_ID")
 RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
 
 azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
+ae = AzureEvaluator(azure)
 
 JUDGE_PROTOCOL_HOST = "localhost"
 JUDGE_PROTOCOL_PORT = 12345
@@ -31,7 +32,9 @@ async def main():
     judge_protocol_handler.start_handler(JUDGE_PROTOCOL_HOST, JUDGE_PROTOCOL_PORT)
     website_protocol_handler.start_handler(WEBSITE_PROTOCOL_HOST, WEBSITE_PROTOCOL_PORT)
 
-    ae = AzureEvaluator(azure)
+    # TODO TP remove
+    from time import sleep
+    sleep(999999)
 
     # Assign temporary values
 
