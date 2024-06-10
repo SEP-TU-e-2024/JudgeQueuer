@@ -1,7 +1,5 @@
 import asyncio
 import os
-import socket
-import threading
 
 from dotenv import load_dotenv
 
@@ -9,8 +7,7 @@ from azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from custom_logger import main_logger
 from models import JudgeRequest, MachineType, ResourceSpecification, Submission
-from protocol import Connection
-from protocol.judge import Commands, JudgeProtocol
+from protocol import judge_protocol_handler, website_protocol_handler
 
 # Initialize environment variables from the `.env` file
 load_dotenv()
@@ -24,47 +21,16 @@ RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
 
 azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
 
-HOST = "localhost"
-PORT = 12345
-
-
-def handle_connection(connection: Connection):
-    # Instantiate the protocol
-    protocol = JudgeProtocol(connection)
-
-    try:
-        # Check if the runner is initialized correctly.
-        protocol.send_command(Commands.CHECK, True)
-
-        # TODO: While loop that creates commands depending on the requests sent by the Backend
-
-    except Exception:
-        logger.error(
-            f"An unexpected error has occured while trying to send a command to the runner at {connection.ip}:{connection.port}.",
-            exc_info=1,
-        )
-
-
-def establish_connection():
-    # Define the socket and bind it to the given host and port
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind((HOST, PORT))
-
-    # Allow the socket to be reused after the program exits without waiting for the default timeout
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-    sock.listen(1000)
-
-    logger.info(f"Started listening for Runner connections on {HOST}:{PORT}...")
-
-    while True:
-        client_sock, addr = sock.accept()
-        logger.info(f"Received connection attempt from {addr[0]}:{addr[1]}.")
-        handle_connection(Connection(addr[0], addr[1], client_sock, threading.Lock()))
+JUDGE_PROTOCOL_HOST = "localhost"
+JUDGE_PROTOCOL_PORT = 12345
+WEBSITE_PROTOCOL_HOST = "localhost"
+WEBSITE_PROTOCOL_PORT = 30000
 
 
 async def main():
-    threading.Thread(target=establish_connection, daemon=True).start()
+    judge_protocol_handler.start_handler(JUDGE_PROTOCOL_HOST, JUDGE_PROTOCOL_PORT)
+    website_protocol_handler.start_handler(WEBSITE_PROTOCOL_HOST, WEBSITE_PROTOCOL_PORT)
+
     ae = AzureEvaluator(azure)
 
     # Assign temporary values
