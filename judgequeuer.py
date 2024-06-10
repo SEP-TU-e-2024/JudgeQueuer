@@ -7,12 +7,16 @@ from dotenv import load_dotenv
 
 from azureevaluator import AzureEvaluator
 from azurewrap import Azure
+from custom_logger import main_logger
 from models import JudgeRequest, MachineType, ResourceSpecification, Submission
 from protocol import Connection
-from protocol.judge import JudgeProtocol, Commands
+from protocol.judge import Commands, JudgeProtocol
 
 # Initialize environment variables from the `.env` file
 load_dotenv()
+
+# Initialize the logger
+logger = main_logger.getChild("JudgeQueuer")
 
 # Load Azure constants from env vars
 SUBSCRIPTION_ID = os.getenv("AZURE_SUBSCRIPTION_ID")
@@ -24,20 +28,39 @@ HOST = "localhost"
 PORT = 12345
 
 
-def handle_conneciton(connection: Connection):
+def handle_connection(connection: Connection):
+    # Instantiate the protocol
     protocol = JudgeProtocol(connection)
-    
-    protocol.send_command(Commands.CHECK, True)
+
+    try:
+        # Check if the runner is initialized correctly.
+        protocol.send_command(Commands.CHECK, True)
+
+        # TODO: While loop that creates commands depending on the requests sent by the Backend
+
+    except Exception:
+        logger.error(
+            f"An unexpected error has occured while trying to send a command to the runner at {connection.ip}:{connection.port}.",
+            exc_info=1,
+        )
 
 
 def estabish_connection():
+    # Define the socket and bind it to the given host and port
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((HOST, PORT))
+
+    # Allow the socket to be reused after the program exits without waiting for the default timeout
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
     sock.listen(1000)
+
+    logger.info(f"Started listening for Runner connections on {HOST}:{PORT}...")
 
     while True:
         client_sock, addr = sock.accept()
-        handle_conneciton(Connection(addr[0], addr[1], client_sock, threading.Lock()))
+        logger.info(f"Received connection attempt from {addr[0]}:{addr[1]}.")
+        handle_connection(Connection(addr[0], addr[1], client_sock, threading.Lock()))
 
 
 async def main():
@@ -61,15 +84,15 @@ async def main():
     judge_request = JudgeRequest(submission, resource_allocation)
 
     # Test out submitting judge request
-    print("Submitting judge request...")
-    print(await ae.submit(judge_request))
+    logger.info("Submitting judge request...")
+    logger.info(await ae.submit(judge_request))
 
     # Assign Judge request
     judge_request = JudgeRequest(submission, resource_allocation)
 
     # Test out submitting judge request
-    print("Submitting judge request...")
-    print(await ae.submit(judge_request))
+    logger.info("Submitting judge request...")
+    logger.info(await ae.submit(judge_request))
 
 
 if __name__ == "__main__":
