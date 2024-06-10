@@ -3,5 +3,5 @@ add **/*.py
 settings -reportOutputDirectory htmlDir
 settings -metricsOutputFile metrics.csv
 analyze
-export -dependencies file matrix matrix.csv
+export -dependencies -format long file matrix matrix.csv
 metrics
