@@ -11,7 +11,7 @@ from custom_logger import main_logger
 from .protocol import Connection
 from .website.website_protocol import WebsiteProtocol
 
-logger = main_logger.getChild("judge_handler")
+logger = main_logger.getChild("website_protocol_handler")
 
 class ProtocolHandler:
     ip: str
@@ -81,11 +81,7 @@ class ProtocolHandler:
             sock.close()
         self.connection = None
 
-if __name__ == "__main__":
-    protocol_handler = ProtocolHandler("localhost", 30000)
-    try:
-        protocol_handler.start()
-    except KeyboardInterrupt:
-        logger.info("Shutting down the website connection...")
-        protocol_handler.stop()
-        exit(0)
+def start_handler(host, port):
+    protocol_handler = ProtocolHandler(host, port)
+    thread = threading.Thread(target=protocol_handler.start, daemon=True)
+    thread.start()

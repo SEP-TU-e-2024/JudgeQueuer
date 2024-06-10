@@ -7,7 +7,7 @@ from azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from custom_logger import main_logger
 from models import JudgeRequest, MachineType, ResourceSpecification, Submission
-from protocol import judge_protocol_handler
+from protocol import judge_protocol_handler, website_protocol_handler
 
 # Initialize environment variables from the `.env` file
 load_dotenv()
@@ -21,12 +21,16 @@ RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
 
 azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
 
-HOST = "localhost"
-PORT = 12345
+JUDGE_PROTOCOL_HOST = "localhost"
+JUDGE_PROTOCOL_PORT = 12345
+WEBSITE_PROTOCOL_HOST = "localhost"
+WEBSITE_PROTOCOL_PORT = 30000
 
 
 async def main():
-    judge_protocol_handler.start_handler()
+    judge_protocol_handler.start_handler(JUDGE_PROTOCOL_HOST, JUDGE_PROTOCOL_PORT)
+    website_protocol_handler.start_handler(WEBSITE_PROTOCOL_HOST, WEBSITE_PROTOCOL_PORT)
+
     ae = AzureEvaluator(azure)
 
     # Assign temporary values
