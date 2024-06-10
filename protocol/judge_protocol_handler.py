@@ -1,7 +1,8 @@
 import socket
 import threading
 
-from ..custom_logger import main_logger
+from custom_logger import main_logger
+
 from . import Connection
 from .judge import Commands, JudgeProtocol
 
