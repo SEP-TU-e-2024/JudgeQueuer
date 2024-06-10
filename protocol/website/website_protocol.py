@@ -2,16 +2,16 @@
 This module containes the WebsiteProtocol class.
 """
 
-import logging
+from custom_logger import main_logger
+from protocol import Connection, Protocol
 
-from . import Connection, Protocol
-from .judge.commands import Commands
-from .judge.commands.command import Command
+from .commands import Commands
+from .commands.command import Command
 
-logger = logging.getLogger("judge")
+logger = main_logger.getChild("website")
 
 
-class JudgeProtocol(Protocol):
+class WebsiteProtocol(Protocol):
     """
     The protocol class used by the website.
     """
@@ -23,7 +23,7 @@ class JudgeProtocol(Protocol):
 
     def receive_command(self) -> tuple[Command, dict]:
         """
-        Handles the incoming commands from the judge server.
+        Handles the incoming commands from the website.
         """
 
         message = Protocol.receive(self.connection)
@@ -38,7 +38,7 @@ class JudgeProtocol(Protocol):
 
     def handle_command(self, command_id: str, command_name: str, args: dict):
         """
-        Handles the incoming commands from the judge server.
+        Handles the incoming commands from the website.
         """
 
         try:

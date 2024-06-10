@@ -1,19 +1,17 @@
 """
-The main class of the website protocol server. It handles the connection to the judge server.
+The main class of the website protocol server. It handles the connection to the website server.
 """
 
-import logging
 import socket
 import threading
 from time import sleep
 
-from .protocol import Connection
-from .website_test import JudgeProtocol
+from custom_logger import main_logger
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("judge_handler")
+from .protocol import Connection
+from .website.website_protocol import WebsiteProtocol
+
+logger = main_logger.getChild("judge_handler")
 
 class ProtocolHandler:
     ip: str
@@ -21,7 +19,7 @@ class ProtocolHandler:
     debug: bool
     threads: list[threading.Thread]
     connection: Connection
-    protocol: JudgeProtocol
+    protocol: WebsiteProtocol
 
     def __init__(self, ip, port, debug=False):
         self.ip = ip
@@ -31,22 +29,22 @@ class ProtocolHandler:
 
     def start(self):
         """
-        Starts the connection to the judge server. In case of a unexpected disconnection, it retries to connect.
+        Starts the connection to the website server. In case of a unexpected disconnection, it retries to connect.
         """
 
-        logger.info(f"Trying to connect to the Judge server at {self.ip}:{self.port} ...")
+        logger.info(f"Trying to connect to the website server at {self.ip}:{self.port} ...")
 
         while True:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect((self.ip, self.port))
                 self.connection = Connection(self.ip, self.port, sock, threading.Lock())
-                self.protocol = JudgeProtocol(self.connection)
+                self.protocol = WebsiteProtocol(self.connection)
                 self._handle_commands()
 
             except (ConnectionRefusedError, ConnectionResetError) as e:
                 self.connection = None
-                logger.info(f"Failed to connect to judge server. Retrying in 5 seconds... ({e})")
+                logger.info(f"Failed to connect to website server. Retrying in 5 seconds... ({e})")
                 sleep(5) # TODO hardcoded
 
             finally:
@@ -54,7 +52,7 @@ class ProtocolHandler:
 
     def _handle_commands(self):
         """
-        Handles the incoming commands from the judge server.
+        Handles the incoming commands from the website server.
         """
 
         while True:
@@ -69,7 +67,7 @@ class ProtocolHandler:
 
     def stop(self):
         """
-        Closes the connection to the judge server.
+        Closes the connection to the website server.
         """
 
         for thread in self.threads:
@@ -86,6 +84,6 @@ if __name__ == "__main__":
     try:
         protocol_handler.start()
     except KeyboardInterrupt:
-        logger.info("Shutting down the judge connection...")
+        logger.info("Shutting down the website connection...")
         protocol_handler.stop()
         exit(0)
