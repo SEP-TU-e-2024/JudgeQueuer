@@ -22,7 +22,7 @@ class ProtocolHandler:
     connection: Connection
     protocol: WebsiteProtocol
 
-    def __init__(self, ip: str, port: int, connect_retry_timeout: float = 5, debug: bool = False):
+    def __init__(self, ip: str, port: int, connect_retry_timeout: float = 1, debug: bool = False):
         self.ip = ip
         self.port = port
         self.connect_retry_timeout = connect_retry_timeout
