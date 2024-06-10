@@ -25,7 +25,7 @@ def handle_connection(connection: Connection):
         )
 
 
-def estabish_connection(host, port):
+def establish_connection(host, port):
     # Define the socket and bind it to the given host and port
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((host, port))
@@ -43,5 +43,5 @@ def estabish_connection(host, port):
         handle_connection(Connection(addr[0], addr[1], client_sock, threading.Lock()))
 
 def start_handler(host, port):
-    thread = threading.Thread(target=estabish_connection, args=(host, port), daemon=True)
+    thread = threading.Thread(target=establish_connection, args=(host, port), daemon=True)
     thread.start()
