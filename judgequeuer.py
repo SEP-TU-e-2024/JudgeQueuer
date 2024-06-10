@@ -87,13 +87,6 @@ async def main():
     logger.info("Submitting judge request...")
     logger.info(await ae.submit(judge_request))
 
-    # Assign Judge request
-    judge_request = JudgeRequest(submission, resource_allocation)
-
-    # Test out submitting judge request
-    logger.info("Submitting judge request...")
-    logger.info(await ae.submit(judge_request))
-
 
 if __name__ == "__main__":
     # Wrap main to make sure all Azure objects are closed properly
@@ -102,9 +95,6 @@ if __name__ == "__main__":
             await main()
         finally:
             await azure.close()
-
-    # Run the main wrapper async
-    asyncio.run(wrap_main())
 
     # Run the main wrapper async
     asyncio.run(wrap_main())
