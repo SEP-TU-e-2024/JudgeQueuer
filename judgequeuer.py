@@ -45,7 +45,7 @@ def handle_connection(connection: Connection):
         )
 
 
-def estabish_connection():
+def establish_connection():
     # Define the socket and bind it to the given host and port
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((HOST, PORT))
