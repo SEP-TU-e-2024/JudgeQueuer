@@ -16,14 +16,16 @@ logger = main_logger.getChild("judge_handler")
 class ProtocolHandler:
     ip: str
     port: int
+    connect_retry_timeout: float
     debug: bool
     threads: list[threading.Thread]
     connection: Connection
     protocol: WebsiteProtocol
 
-    def __init__(self, ip, port, debug=False):
+    def __init__(self, ip, port, connect_retry_timeout: float = 5, debug=False):
         self.ip = ip
         self.port = port
+        self.connect_retry_timeout = connect_retry_timeout
         self.debug = debug
         self.threads = []
 
@@ -44,8 +46,8 @@ class ProtocolHandler:
 
             except (ConnectionRefusedError, ConnectionResetError) as e:
                 self.connection = None
-                logger.info(f"Failed to connect to website server. Retrying in 5 seconds... ({e})")
-                sleep(5) # TODO hardcoded
+                logger.info(f"Failed to connect to website server. Retrying in {self.connect_retry_timeout} seconds... ({e})")
+                sleep(self.connect_retry_timeout)
 
             finally:
                 self.stop()
