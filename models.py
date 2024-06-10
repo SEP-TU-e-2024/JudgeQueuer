@@ -12,6 +12,14 @@ class MachineType:
     def __init__(self, name: str, tier: str):
         self.name = name
         self.tier = tier
+    
+    @staticmethod
+    def from_name(name: str):
+        parts = name.split('_', 1)
+        if len(parts) != 2:
+            raise ValueError(f"Invalid MachineType name format `{name}`")
+
+        return MachineType(name=name, tier=parts[0])
 
 class ResourceSpecification:
     """
@@ -52,11 +60,11 @@ class JudgeRequest:
     A request for a submission to be evaluated according to some resource specification.
     """
     submission: 'Submission'
-    resource_allocation: 'ResourceSpecification'
+    resource_specification: 'ResourceSpecification'
 
-    def __init__(self, submission: 'Submission', resource_allocation: 'ResourceSpecification'):
+    def __init__(self, submission: 'Submission', resource_specification: 'ResourceSpecification'):
         self.submission = submission
-        self.resource_allocation = resource_allocation
+        self.resource_specification = resource_specification
 
 class JudgeResult:
     """
