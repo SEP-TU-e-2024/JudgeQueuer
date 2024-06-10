@@ -9,7 +9,7 @@ from azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from models import JudgeRequest, MachineType, ResourceSpecification, Submission
 from protocol import Connection
-from protocol.judge import JudgeProtocol
+from protocol.judge import JudgeProtocol, Commands
 
 # Initialize environment variables from the `.env` file
 load_dotenv()
@@ -24,14 +24,20 @@ HOST = "localhost"
 PORT = 12345
 
 
+def handle_conneciton(connection: Connection):
+    protocol = JudgeProtocol(connection)
+    
+    protocol.send_command(Commands.CHECK, True)
+
+
 def estabish_connection():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((HOST, PORT))
     sock.listen(1000)
 
-    # while True:
-    #     client_sock, address = sock.accept()
-    #     connection = Connection(address[0], address[1], client_sock, threading.Lock())
+    while True:
+        client_sock, addr = sock.accept()
+        handle_conneciton(Connection(addr[0], addr[1], client_sock, threading.Lock()))
 
 
 async def main():
