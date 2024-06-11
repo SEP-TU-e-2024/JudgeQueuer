@@ -147,6 +147,7 @@ class JudgeVMSS:
         judge_result = await self.submit_vm(vm, judge_request)
 
         # Reduce capacity and update vm dict
+        # TODO TP: uncomment or no
         # await self.reduce_capacity()
         # await self.__update_vm_dict()
 
