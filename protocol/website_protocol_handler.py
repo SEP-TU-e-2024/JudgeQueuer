@@ -101,7 +101,9 @@ class ProtocolHandler:
             sock.close()
         self.connection = None
 
-def start_handler(host, port):
+def start_handler(host, port) -> threading.Thread:
     protocol_handler = ProtocolHandler(host, port)
     thread = threading.Thread(target=protocol_handler.start, daemon=True)
     thread.start()
+
+    return thread

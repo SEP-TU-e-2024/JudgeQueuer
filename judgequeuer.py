@@ -37,13 +37,13 @@ async def main():
 
     logger.info("Starting protocols...")
 
-    judge_protocol_handler.start_handler(JUDGE_PROTOCOL_HOST, JUDGE_PROTOCOL_PORT)
-    website_protocol_handler.start_handler(WEBSITE_PROTOCOL_HOST, WEBSITE_PROTOCOL_PORT)
+    judge_thread = judge_protocol_handler.start_handler(JUDGE_PROTOCOL_HOST, JUDGE_PROTOCOL_PORT)
+    website_thread = website_protocol_handler.start_handler(WEBSITE_PROTOCOL_HOST, WEBSITE_PROTOCOL_PORT)
 
     logger.info("JudgeQueuer ready")
 
-    # TODO TP remove
-    sleep(99999999)
+    judge_thread.join()
+    website_thread.join()
 
 if __name__ == "__main__":
     # Wrap main to make sure all Azure objects are closed properly
