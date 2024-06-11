@@ -1,16 +1,17 @@
+from dotenv import load_dotenv
+
+# Initialize environment variables from the `.env` file
+# Should be done before any imports, in order to make sure all files with top-level code has env vars available to them
+load_dotenv()
+
 import asyncio
 import os
 from time import sleep
-
-from dotenv import load_dotenv
 
 from azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from custom_logger import main_logger
 from protocol import judge_protocol_handler, website_protocol_handler
-
-# Initialize environment variables from the `.env` file
-load_dotenv()
 
 # Initialize the logger
 logger = main_logger.getChild("JudgeQueuer")
