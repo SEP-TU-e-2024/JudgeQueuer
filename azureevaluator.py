@@ -4,7 +4,7 @@ from typing import Dict
 from azure.mgmt.compute.models import VirtualMachineScaleSet, VirtualMachineScaleSetVM
 from dotenv import load_dotenv
 
-from azurewrap.base import Azure
+from azurewrap import Azure
 from evaluators import SubmissionEvaluator
 from models import JudgeRequest, JudgeResult, MachineType, ResourceSpecification
 
@@ -19,18 +19,48 @@ VMAPP_GALLERY = os.getenv("AZURE_VMAPP_GALLERY")
 VMAPP_NAME = os.getenv("AZURE_VMAPP_NAME")
 VMAPP_VERSION = os.getenv("AZURE_VMAPP_VERSION")
 
+instance = None
+"""
+Keep track of the instance of the AzureEvaluator class, for access in Command classes.
+"""
+def get_instance() -> 'AzureEvaluator':
+    """
+    Get the instance of the AzureEvaluator class.
+    """
+    if instance is None:
+        raise Exception("AzureEvaluator instance is not initialized")
+
+    return instance
 
 class AzureEvaluator(SubmissionEvaluator):
     """
     An evaluator using Azure Virtual Machine Scale Set.
     """
-    # TODO: make sure that we have only 1 MachineType instance per its descriptor, otherwise this dict doesn't work, could be done by implementing `__eq__`
     judgevmss_dict: Dict['MachineType', 'JudgeVMSS']
     azure: Azure
     
     def __init__(self, azure: Azure):
         self.judgevmss_dict = {}
         self.azure = azure
+
+        # Update the global instance variable with this instance
+        global instance
+        instance = self
+
+    async def initialize(self):
+        """
+        Initialize the AzureEvaluator, by filling the VMSS cache with the available VMSS's.
+        """
+        azure_vmsss = await self.azure.list_vmss()
+        for azure_vmss in azure_vmsss:
+            # Get the name and machine type of the VMSS
+            judgevmss_name = azure_vmss.name
+            machine_type = MachineType(azure_vmss.sku.name, azure_vmss.sku.tier)
+
+            judge_vmss = JudgeVMSS(machine_type=machine_type, judgevmss_name=judgevmss_name, vmss=azure_vmss, azure=self.azure)
+
+            # Store VMSS in the cache dict
+            self.judgevmss_dict[machine_type] = judge_vmss
 
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
         """
@@ -240,7 +270,6 @@ class JudgeVM:
         """
         Check whether this vm has enough capacity to take on the resource allocation
         """
-        # pass
         # TODO implement check for capacity
         # Check cpu, gpu and memory capacity of vm and return true if there is enough capacity
         if self.free_cpu >= resource_allocation.num_cpu and self.free_gpu >= resource_allocation.num_gpu and self.free_memory >= resource_allocation.num_memory:
@@ -255,7 +284,7 @@ class JudgeVM:
         # TODO TP rm
         print(f"submitting on VM {self.vm.name}")
 
-        pass
+        return JudgeResult("nothing to see here")
 
     async def alive(self):
         # TODO check if self.vm is actually still alive (decreasing capacity in vmss can remove it, or by calling delete_vm)

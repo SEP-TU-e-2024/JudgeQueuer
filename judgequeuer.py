@@ -1,12 +1,12 @@
 import asyncio
 import os
+from time import sleep
 
 from dotenv import load_dotenv
 
 from azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from custom_logger import main_logger
-from models import JudgeRequest, MachineType, ResourceSpecification, Submission
 from protocol import judge_protocol_handler, website_protocol_handler
 
 # Initialize environment variables from the `.env` file
@@ -19,9 +19,11 @@ logger = main_logger.getChild("JudgeQueuer")
 SUBSCRIPTION_ID = os.getenv("AZURE_SUBSCRIPTION_ID")
 RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
 
+# Initiate Azure objects
 azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
 ae = AzureEvaluator(azure)
 
+# Initiate protocol constants
 JUDGE_PROTOCOL_HOST = "localhost"
 JUDGE_PROTOCOL_PORT = 12345
 WEBSITE_PROTOCOL_HOST = "localhost"
@@ -29,33 +31,18 @@ WEBSITE_PROTOCOL_PORT = 30000
 
 
 async def main():
+    logger.info("Initializer AzureEvaluator...")
+    await ae.initialize()
+
+    logger.info("Starting protocols...")
+
     judge_protocol_handler.start_handler(JUDGE_PROTOCOL_HOST, JUDGE_PROTOCOL_PORT)
     website_protocol_handler.start_handler(WEBSITE_PROTOCOL_HOST, WEBSITE_PROTOCOL_PORT)
 
+    logger.info("JudgeQueuer ready")
+
     # TODO TP remove
-    from time import sleep
-    sleep(999999)
-
-    # Assign temporary values
-
-    # Assign submission information
-    submission = Submission(1, "source_url")
-
-    # Assign Machine type
-    machine_type = MachineType("Standard_B1s", "Standard")
-    # machine_type = MachineType("Standard_D2s_v3", "Standard")
-    # machine_type = MachineType("Standard_D4s_v3", "Standard")
-
-    # Assign resource specification
-    resource_allocation = ResourceSpecification(4, 32, 1, machine_type)
-
-    # Assign Judge request
-    judge_request = JudgeRequest(submission, resource_allocation)
-
-    # Test out submitting judge request
-    logger.info("Submitting judge request...")
-    logger.info(await ae.submit(judge_request))
-
+    sleep(99999999)
 
 if __name__ == "__main__":
     # Wrap main to make sure all Azure objects are closed properly
