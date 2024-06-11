@@ -280,6 +280,11 @@ class JudgeVM:
         # TODO: keep track of free resources
         logger.info(f"Submitting judge request {judge_request} to VM {self.vm.name}")
 
+        # TODO leftoff: selection based on computer name
+        avm = await self.azure.get_vm(self.vm.name)
+
+        print('VM:', avm.os_profile.computer_name)
+
         return JudgeResult("nothing to see here")
 
     async def alive(self):

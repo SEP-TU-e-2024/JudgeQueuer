@@ -62,6 +62,9 @@ class AsyncAzure(Azure):
 
     def list_vmss(self, *args, **kwargs):
         return self.__run(super().list_vmss(*args, **kwargs))
+    
+    def get_vm(self, *args, **kwargs):
+        return self.__run(super().get_vm(*args, **kwargs))
 
     def create_vmss(self, *args, **kwargs):
         return self.__run(super().create_vmss(*args, **kwargs))
