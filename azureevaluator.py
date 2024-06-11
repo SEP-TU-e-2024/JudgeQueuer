@@ -1,16 +1,16 @@
 import os
-from typing import Dict
 
 from azure.mgmt.compute.models import VirtualMachineScaleSet, VirtualMachineScaleSetVM
-from dotenv import load_dotenv
 
 from azurewrap import Azure
+from custom_logger import main_logger
 from evaluators import SubmissionEvaluator
 from models import JudgeRequest, JudgeResult, MachineType, ResourceSpecification
 
-# Initialize environment variables from the `.env` file
-load_dotenv()
+# Initialize the logger
+logger = main_logger.getChild("azureevaluator")
 
+# Load Azure constants from env vars
 NSG_NAME = os.getenv("AZURE_NSG_NAME")
 VNET_NAME = os.getenv("AZURE_VNET_NAME")
 VNET_SUBNET_NAME = os.getenv("AZURE_VNET_SUBNET_NAME")
@@ -36,7 +36,7 @@ class AzureEvaluator(SubmissionEvaluator):
     """
     An evaluator using Azure Virtual Machine Scale Set.
     """
-    judgevmss_dict: Dict['MachineType', 'JudgeVMSS']
+    judgevmss_dict: dict['MachineType', 'JudgeVMSS']
     azure: Azure
     
     def __init__(self, azure: Azure):
@@ -66,17 +66,17 @@ class AzureEvaluator(SubmissionEvaluator):
         """
         Handles finding, creating and deletion of vmss that is appropriate for this judgeRequest.
         """
-        # TODO TP rm
-        print("Submitting judge request")
+        logger.info(f"Starting of submission for judge request {judge_request}")
 
-        # Get the right VMSS, or make one if needed.
+        # Get the right VMSS, or make one if needed
         machine_type = judge_request.resource_specification.machine_type
         if machine_type in self.judgevmss_dict:
             judgevmss = self.judgevmss_dict[machine_type]
         else:
             judgevmss_name = "benchlab_judge_" + machine_type.name
 
-            print("Creating VMSS")
+            logger.info(f"Creating VMSS {judgevmss_name}")
+
             await self.azure.create_vmss(judgevmss_name,
                 machine_type_name=machine_type.name,
                 machine_type_tier=machine_type.tier,
@@ -90,16 +90,19 @@ class AzureEvaluator(SubmissionEvaluator):
             )
 
             vmss = await self.azure.get_vmss(judgevmss_name)
+
+            # Create JudgeVMSS and add it to the cache
             judgevmss = JudgeVMSS(machine_type, judgevmss_name, vmss, self.azure)
             self.judgevmss_dict[machine_type] = judgevmss
 
         # Then forward call to that.
         judge_result = await judgevmss.submit(judge_request)
 
-        if await judgevmss.is_empty():
-            # judgevmss is empty with no vms, close judgevmss
-            await judgevmss.close()
-            self.judgevmss_dict.pop(machine_type)
+        # TODO: close VMSS if empty?
+        # if await judgevmss.is_empty():
+        #     # judgevmss is empty with no vms, close judgevmss
+        #     await judgevmss.close()
+        #     self.judgevmss_dict.pop(machine_type)
 
         return judge_result
 
@@ -109,10 +112,10 @@ class JudgeVMSS:
     """
     machine_type: 'MachineType'
     judgevmss_name: str
-    judgevm_dict: Dict[str, 'JudgeVM']
+    judgevm_dict: dict[str, 'JudgeVM']
     vmss: VirtualMachineScaleSet
     azure: Azure
-    
+
     def __init__(self, machine_type: MachineType, judgevmss_name: str, vmss: VirtualMachineScaleSet , azure: Azure):
         self.machine_type = machine_type
         self.judgevmss_name = judgevmss_name
@@ -125,9 +128,6 @@ class JudgeVMSS:
         Handle the request for this machine type vmss, an available vm will be found/created and assigned.
         """
         resource_allocation = judge_request.resource_specification
-
-        # TODO TP rm
-        print(f"submitting on VMSS {self.vmss.name}")
 
         # Get a right vm that is available
         vm = await self.check_available_vm(resource_allocation)
@@ -146,10 +146,7 @@ class JudgeVMSS:
         # Submit using the vm the judge request
         judge_result = await self.submit_vm(vm, judge_request)
 
-        # Reduce capacity and update vm dict
-        # TODO TP: uncomment or no
-        # await self.reduce_capacity()
-        # await self.__update_vm_dict()
+        # TODO: possibly downsize capacity if low usage
 
         return judge_result
 
@@ -281,9 +278,7 @@ class JudgeVM:
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
         # TODO: communicate the judge request to the VM and monitor status
         # TODO: keep track of free resources
-
-        # TODO TP rm
-        print(f"submitting on VM {self.vm.name}")
+        logger.info(f"Submitting judge request {judge_request} to VM {self.vm.name}")
 
         return JudgeResult("nothing to see here")
 
