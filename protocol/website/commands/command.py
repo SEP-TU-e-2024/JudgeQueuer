@@ -12,7 +12,7 @@ class Command(ABC):
 
     @staticmethod
     @abstractmethod
-    def execute(args: dict) -> dict:
+    async def execute(args: dict) -> dict:
         """
         Executes the command. It is recommended to call this in a separate thread.
         """

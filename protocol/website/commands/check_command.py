@@ -11,5 +11,5 @@ class CheckCommand(Command):
     """
 
     @staticmethod
-    def execute(args: dict):
+    async def execute(args: dict):
         return {"status": "ok"}
