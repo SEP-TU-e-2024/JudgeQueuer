@@ -102,6 +102,15 @@ class Azure:
         """
         return await self.compute_client.virtual_machine_scale_sets.get(self.resource_group_name, name)
 
+    async def list_vmss(self) -> list[VirtualMachineScaleSet]:
+        """
+        List all VMSS's in the resource group.
+        """
+        vmsss = []
+        async for vmss in self.compute_client.virtual_machine_scale_sets.list(self.resource_group_name):
+            vmsss.append(vmss)
+        return vmsss
+
     #
     # Modification functions
     #
