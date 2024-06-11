@@ -43,6 +43,8 @@ def establish_connection(host, port):
         logger.info(f"Received connection attempt from {addr[0]}:{addr[1]}.")
         handle_connection(Connection(addr[0], addr[1], client_sock, threading.Lock()))
 
-def start_handler(host, port):
+def start_handler(host, port) -> threading.Thread:
     thread = threading.Thread(target=establish_connection, args=(host, port), daemon=True)
     thread.start()
+
+    return thread

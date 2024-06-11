@@ -36,7 +36,7 @@ class WebsiteProtocol(Protocol):
 
         return command_id, command_name, command_args
 
-    def handle_command(self, command_id: str, command_name: str, args: dict):
+    async def handle_command(self, command_id: str, command_name: str, args: dict):
         """
         Handles the incoming commands from the website.
         """
@@ -47,7 +47,7 @@ class WebsiteProtocol(Protocol):
                 return
 
             command = Commands[command_name].value
-            response = command.execute(args)
+            response = await command.execute(args)
             message = {"id": command_id, "response": response}
             Protocol.send(self.connection, message)
 

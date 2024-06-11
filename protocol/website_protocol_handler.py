@@ -2,6 +2,7 @@
 The main class of the website protocol server. It handles the connection to the website server.
 """
 
+import asyncio
 import socket
 import threading
 from time import sleep
@@ -22,7 +23,7 @@ class ProtocolHandler:
     connection: Connection
     protocol: WebsiteProtocol
 
-    def __init__(self, ip: str, port: int, connect_retry_timeout: float = 5, debug: bool = False):
+    def __init__(self, ip: str, port: int, connect_retry_timeout: float = 1, debug: bool = False):
         self.ip = ip
         self.port = port
         self.connect_retry_timeout = connect_retry_timeout
@@ -59,13 +60,32 @@ class ProtocolHandler:
 
         while True:
             command_id, command_name, command_args = self.protocol.receive_command()
-            thread = threading.Thread(
-                target=self.protocol.handle_command,
-                args=(command_id, command_name, command_args),
-                daemon=True,
+
+            thread = self._run_future_off_thread(
+                self.protocol.handle_command(command_id, command_name, command_args)
             )
-            thread.start()
+
             self.threads.append(thread)
+
+    def _run_future_off_thread(self, future) -> threading.Thread:
+        """
+        Runs the given future in a separate thread, returning the thread object.
+        """
+        # Entrypoint for command execution thread, sets event loop and runs with the future until completion
+        def run_event_loop(loop: asyncio.AbstractEventLoop, future):
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(future)
+
+        # Create a new event loop
+        new_loop = asyncio.new_event_loop()
+
+        # Start the event loop in a new thread, starting the command handling future
+        thread = threading.Thread(target=run_event_loop,
+                                    args=(new_loop, future),
+                                    daemon=True)
+        thread.start()
+
+        return thread
 
     def stop(self):
         """
@@ -81,7 +101,9 @@ class ProtocolHandler:
             sock.close()
         self.connection = None
 
-def start_handler(host, port):
+def start_handler(host, port) -> threading.Thread:
     protocol_handler = ProtocolHandler(host, port)
     thread = threading.Thread(target=protocol_handler.start, daemon=True)
     thread.start()
+
+    return thread

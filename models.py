@@ -3,15 +3,31 @@ from enum import Enum
 
 class MachineType:
     """
-    A type of machine.
+    A type of machine, see https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/overview.
     """
-    # TODO: improve description
+    # TODO: if possible, decouple this from Azure-specific machine types
     name: str
     tier: str
 
     def __init__(self, name: str, tier: str):
         self.name = name
         self.tier = tier
+    
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, MachineType):
+            return False
+        return self.name == value.name and self.tier == value.tier
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.tier))
+
+    @staticmethod
+    def from_name(name: str):
+        parts = name.split('_', 1)
+        if len(parts) != 2:
+            raise ValueError(f"Invalid MachineType name format `{name}`")
+
+        return MachineType(name=name, tier=parts[0])
 
 class ResourceSpecification:
     """
@@ -52,11 +68,11 @@ class JudgeRequest:
     A request for a submission to be evaluated according to some resource specification.
     """
     submission: 'Submission'
-    resource_allocation: 'ResourceSpecification'
+    resource_specification: 'ResourceSpecification'
 
-    def __init__(self, submission: 'Submission', resource_allocation: 'ResourceSpecification'):
+    def __init__(self, submission: 'Submission', resource_specification: 'ResourceSpecification'):
         self.submission = submission
-        self.resource_allocation = resource_allocation
+        self.resource_specification = resource_specification
 
 class JudgeResult:
     """
