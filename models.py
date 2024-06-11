@@ -3,9 +3,9 @@ from enum import Enum
 
 class MachineType:
     """
-    A type of machine.
+    A type of machine, see https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/overview.
     """
-    # TODO: improve description
+    # TODO: if possible, decouple this from Azure-specific machine types
     name: str
     tier: str
 
@@ -13,6 +13,14 @@ class MachineType:
         self.name = name
         self.tier = tier
     
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, MachineType):
+            return False
+        return self.name == value.name and self.tier == value.tier
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.tier))
+
     @staticmethod
     def from_name(name: str):
         parts = name.split('_', 1)
