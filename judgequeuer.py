@@ -6,7 +6,6 @@ load_dotenv()
 
 import asyncio
 import os
-from time import sleep
 
 from azureevaluator import AzureEvaluator
 from azurewrap import Azure
