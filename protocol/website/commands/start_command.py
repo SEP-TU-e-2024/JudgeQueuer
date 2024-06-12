@@ -29,7 +29,7 @@ class StartCommand(Command):
                                                        num_gpu=args["gpus"],
                                                        machine_type=machine_type,
                                                        time_limit=args["time_limit"])
-        submission = Submission(submission_type, args["source_url"])
+        submission = Submission(submission_type, args["source_url"], args["validator_url"])
         judge_request = JudgeRequest(submission, resource_specification)
 
         # Submit the request to the evaluator

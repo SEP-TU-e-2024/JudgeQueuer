@@ -301,7 +301,9 @@ class JudgeVM:
         protocol = get_protocol_from_machine_name(self.machine_name)
 
         command = StartCommand()
-        protocol.send_command(command, True)
+        protocol.send_command(command, True,
+                              submission=judge_request.submission.source_url,
+                              validator=judge_request.submission.validator_url)
 
         result = command.result
 
