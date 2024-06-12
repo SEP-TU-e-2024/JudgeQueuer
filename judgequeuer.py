@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 
 # Initialize environment variables from the `.env` file
 # Should be done before any imports, in order to make sure all files with top-level code has env vars available to them
-load_dotenv()
+load_dotenv(override=True)
 
 import asyncio
 import os
