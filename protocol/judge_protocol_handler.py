@@ -25,6 +25,8 @@ def handle_connection(connection: Connection):
         protocol.send_command(command, True)
         machine_name = command.machine_name
 
+        if machine_name in protocol_dict:
+            raise Exception("Runner with the same machine name is already connected")
         protocol_dict[machine_name] = protocol
         logger.info(f"Accepted connection from runner with machine name {machine_name}")
 
