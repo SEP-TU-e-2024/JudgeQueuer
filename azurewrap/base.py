@@ -168,7 +168,7 @@ class Azure:
             "sku": "22_04-lts-gen2",
             "version": "latest"
         }
-        ssh_key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDDUKfFGpdsPyuxaINX5nNfWKMIR0pjZia8kfcsC6tC27zyLYogLQ5eIEhHXofnExmlfiD6R5rtclYhF3Q33VVaJeVg+KtN/Wx/t4REIiCVsI98wFZUWGnXuq6yuAC3GGfLfIqrOfz1/xKwbk+Swj3u4YIXpfT0yLhCXpwmni178qHn02vkd2BlytOTYcyMFiXCnN9uBA2MNu85LMqqL4hHg+HjOCDOivsTlswGt6kd8kfq04eADGgUCOMy2XQk53iD2PgK0gCQxKQlq/ACHMs5fOUFIT8jpYxXmIqT5Y/p1pEPWS3w37t/wD+QHllPbTvTLkCEksPRQr0RMFUj7Ov8/sAdbh1lBidmShWP7txJyVPby1+SVv/dO7Ghpyl58SYC9Zu1oLy8WCmPNE3aTFqTtHwJiGivI4Ymq/lHLNPUrhzzLU6Ek+SaAqre8rMv6D+Ap7tNDmigQdtkDpxNahhj8vFdKdUR1BtF3TsHa/uQRv111jVULi9Uz89Arjdpc9HvRnhI8x2ecIt7pEAfDfxl5i/GaiD5d0F+c6k8WSh2ZBlXbVHcPlGMwWPaaIVok9ghjV7vWn9xN7kM8SR4axf9HPMnGhFBLJp37JBE1TRynVqlUzDo2vCBvGBbYJ6b9ERnuQMHNNqcAguzkQiHqfWTg8vQ1KmhK7wYD6KwysglNQ== tue\20212025@S20212025"
+        ssh_key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDDUKfFGpdsPyuxaINX5nNfWKMIR0pjZia8kfcsC6tC27zyLYogLQ5eIEhHXofnExmlfiD6R5rtclYhF3Q33VVaJeVg+KtN/Wx/t4REIiCVsI98wFZUWGnXuq6yuAC3GGfLfIqrOfz1/xKwbk+Swj3u4YIXpfT0yLhCXpwmni178qHn02vkd2BlytOTYcyMFiXCnN9uBA2MNu85LMqqL4hHg+HjOCDOivsTlswGt6kd8kfq04eADGgUCOMy2XQk53iD2PgK0gCQxKQlq/ACHMs5fOUFIT8jpYxXmIqT5Y/p1pEPWS3w37t/wD+QHllPbTvTLkCEksPRQr0RMFUj7Ov8/sAdbh1lBidmShWP7txJyVPby1+SVv/dO7Ghpyl58SYC9Zu1oLy8WCmPNE3aTFqTtHwJiGivI4Ymq/lHLNPUrhzzLU6Ek+SaAqre8rMv6D+Ap7tNDmigQdtkDpxNahhj8vFdKdUR1BtF3TsHa/uQRv111jVULi9Uz89Arjdpc9HvRnhI8x2ecIt7pEAfDfxl5i/GaiD5d0F+c6k8WSh2ZBlXbVHcPlGMwWPaaIVok9ghjV7vWn9xN7kM8SR4axf9HPMnGhFBLJp37JBE1TRynVqlUzDo2vCBvGBbYJ6b9ERnuQMHNNqcAguzkQiHqfWTg8vQ1KmhK7wYD6KwysglNQ== tue\\20212025@S20212025"
         # TODO remove hardcoded ssh key
 
         # Add parameters to template
