@@ -4,7 +4,8 @@ import threading
 from custom_logger import main_logger
 
 from . import Connection
-from .judge import Commands, JudgeProtocol
+from .judge import JudgeProtocol
+from .judge.commands.info_command import InfoCommand
 
 logger = main_logger.getChild("judge_protocol_handler")
 
@@ -15,7 +16,11 @@ def handle_connection(connection: Connection):
 
     try:
         # Check if the runner is initialized correctly.
-        protocol.send_command(Commands.CHECK, True)
+        command = InfoCommand()
+        protocol.send_command(command, True)
+        machine_name = command.machine_name
+
+        print('Machine name', machine_name)
 
         # TODO: While loop that creates commands depending on the requests sent by the Backend
 
@@ -29,6 +34,7 @@ def handle_connection(connection: Connection):
 def establish_connection(host, port):
     # Define the socket and bind it to the given host and port
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((host, port))
 
     # Allow the socket to be reused after the program exits without waiting for the default timeout
