@@ -8,7 +8,7 @@ from queue import Queue
 from custom_logger import main_logger
 from protocol import Connection, Protocol
 
-from .commands import Commands
+from .commands import Command
 
 logger = main_logger.getChild("protocol.judge")
 
@@ -47,7 +47,7 @@ class JudgeProtocol(Protocol):
                     continue
                 self.queue_dict[message_id].put(response)
 
-    def send_command(self, command: Commands, block: bool = False, **kwargs):
+    def send_command(self, command: Command, block: bool = False, **kwargs):
         """
         Sends a given command with the given arguments to the runner specifed in the connection.
         """
@@ -60,7 +60,7 @@ class JudgeProtocol(Protocol):
             target=self._send_command, args=(command,), kwargs=kwargs, daemon=True
         ).start()
 
-    def _send_command(self, command: Commands, **kwargs):
+    def _send_command(self, command: Command, **kwargs):
         """
         Send command to the runner and wait for the response.
         """
@@ -79,7 +79,7 @@ class JudgeProtocol(Protocol):
             )
             response = queue.get()
 
-            command.value.response(response)
+            command.response(response)
 
         except Exception:
             logger.error(

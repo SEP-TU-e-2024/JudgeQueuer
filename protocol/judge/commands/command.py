@@ -6,9 +6,16 @@ class Command(ABC):
     Base abstract class for commands.
     """
 
-    @staticmethod
+    name: str
+    """
+    The name of this packet, e.g. `CHECK` or `START`.
+    """
+
+    def __init__(self, name: str):
+        self.name = name
+
     @abstractmethod
-    def response(response: dict):
+    def response(self, response: dict):
         """
         Handles the response from the runner.
         """
