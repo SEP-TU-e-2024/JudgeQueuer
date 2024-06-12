@@ -50,7 +50,7 @@ async def main():
     # Test out submitting judge request
     logger.info("Submitting judge request...")
     judge_result = await ae.submit(judge_request)
-    logger.info(judge_result.result)
+    logger.info(f"Received VM judge result {judge_result.result}")
 
     judge_thread.join()
     # website_thread.join()
