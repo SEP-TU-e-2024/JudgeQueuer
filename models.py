@@ -60,10 +60,12 @@ class Submission:
     """
     type: 'SubmissionType'
     source_url: str
+    validator_url: str
 
-    def __init__(self, type: 'SubmissionType', source_url: str):
+    def __init__(self, type: 'SubmissionType', source_url: str, validator_url: str):
         self.type = type
         self.source_url = source_url
+        self.validator_url = validator_url
 
 class JudgeRequest:
     """
