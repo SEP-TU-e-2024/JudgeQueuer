@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 from azure.mgmt.compute.models import VirtualMachineScaleSet, VirtualMachineScaleSetVM
@@ -6,6 +7,7 @@ from azurewrap import Azure
 from custom_logger import main_logger
 from evaluators import SubmissionEvaluator
 from models import JudgeRequest, JudgeResult, MachineType, ResourceSpecification
+from protocol.judge_protocol_handler import protocol_dict
 
 # Initialize the logger
 logger = main_logger.getChild("azureevaluator")
@@ -134,6 +136,7 @@ class JudgeVMSS:
 
         # If no available vm than add capacity
         if vm is None:
+            logger.info("No VM available, increasing capacity...")
             # Get available vm after the added capacity, error if no available
             await self.add_capacity()
 
@@ -215,8 +218,11 @@ class JudgeVMSS:
         for vm in vms:
             # Check if each vm has a judgevm class stored to it in dict
             if vm.name not in self.judgevm_dict:
+                avm = await self.azure.get_vm(vm.name)
+                machine_name = avm.os_profile.computer_name
+
                 # Create and safe vm class
-                judgevm = JudgeVM(vm, self.azure)
+                judgevm = JudgeVM(vm, machine_name, self.azure)
                 self.judgevm_dict[vm.name] = judgevm
 
         for key in list(self.judgevm_dict):
@@ -250,13 +256,15 @@ class JudgeVM:
     An Azure Virtual Machine.
     """
     vm: VirtualMachineScaleSetVM
+    machine_name: str
     azure: Azure
     free_cpu: int
     free_gpu: int
     free_memory: int
 
-    def __init__(self, vm: VirtualMachineScaleSetVM, azure: Azure):
+    def __init__(self, vm: VirtualMachineScaleSetVM, machine_name: str, azure: Azure):
         self.vm = vm
+        self.machine_name = machine_name
         # TODO keep track of whether this vm can be deleted (or is bussy)
         self.azure = azure
         # TODO replace hardcoded values (if possible, get from `vm`)
@@ -278,12 +286,15 @@ class JudgeVM:
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
         # TODO: communicate the judge request to the VM and monitor status
         # TODO: keep track of free resources
-        logger.info(f"Submitting judge request {judge_request} to VM {self.vm.name}")
+        logger.info(f"Submitting judge request {judge_request} to VM {self.vm.name} / {self.machine_name}")
 
-        # TODO leftoff: selection based on computer name
-        avm = await self.azure.get_vm(self.vm.name)
+        while self.machine_name not in protocol_dict:
+            print('waiting for VM to connect', protocol_dict)
+            await asyncio.sleep(1)
 
-        print('VM:', avm.os_profile.computer_name)
+        protocol = protocol_dict[self.machine_name]
+
+        print('protocol', protocol)
 
         return JudgeResult("nothing to see here")
 
