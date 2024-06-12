@@ -9,10 +9,22 @@ from .judge.commands.info_command import InfoCommand
 
 logger = main_logger.getChild("judge_protocol_handler")
 
+protocol_dict_lock = threading.Lock()
+"""
+Lock for protocol_dict to prevent simultaneous access.
+"""
 protocol_dict: dict[str, JudgeProtocol] = {}
 """
 Stores all protocols by the runner's hostname.
 """
+
+def is_machine_name_connected(machine_name: str) -> bool:
+    with protocol_dict_lock:
+        return machine_name in protocol_dict
+
+def get_protocol_from_machine_name(machine_name: str) -> JudgeProtocol:
+    with protocol_dict_lock:
+        return protocol_dict[machine_name]
 
 def handle_connection(connection: Connection):
     # Instantiate the protocol
@@ -20,27 +32,29 @@ def handle_connection(connection: Connection):
 
     machine_name = None
     try:
-        # Check if the runner is initialized correctly.
+        # Request the machine name of the runner
         command = InfoCommand()
         protocol.send_command(command, True)
         machine_name = command.machine_name
 
+        # Store the protocol in the protocol_dict with its machine name
         if machine_name in protocol_dict:
             raise Exception("Runner with the same machine name is already connected")
         protocol_dict[machine_name] = protocol
         logger.info(f"Accepted connection from runner with machine name {machine_name}")
 
+        # Add close listener to remove the protocol from the protocol_dict when the runner disconnects
+        def on_close(machine_name):
+            with protocol_dict_lock:
+                protocol_dict.pop(machine_name)
+                logger.info(f"Runner with machine name {machine_name} has disconnected")
 
-        # TODO: While loop that creates commands depending on the requests sent by the Backend
-
+        protocol.set_close_listener(on_close, (machine_name,))
     except Exception:
         logger.error(
             f"An unexpected error has occured while trying to send a command to the runner at {connection.ip}:{connection.port}.",
             exc_info=1,
         )
-    # finally:
-    #     if machine_name is not None and machine_name in protocol_dict:
-    #         protocol_dict.pop(machine_name)
 
 def establish_connection(host, port):
     # Define the socket and bind it to the given host and port
@@ -58,7 +72,11 @@ def establish_connection(host, port):
     while True:
         client_sock, addr = sock.accept()
         logger.info(f"Received connection attempt from {addr[0]}:{addr[1]}.")
-        handle_connection(Connection(addr[0], addr[1], client_sock, threading.Lock()))
+
+        connection = Connection(addr[0], addr[1], client_sock, threading.Lock())
+        handle_connection(connection)
+        # thread = threading.Thread(target=handle_connection, args=(connection,), daemon=True)
+        # thread.start()
 
 def start_handler(host, port) -> threading.Thread:
     thread = threading.Thread(target=establish_connection, args=(host, port), daemon=True)

@@ -7,7 +7,11 @@ from azurewrap import Azure
 from custom_logger import main_logger
 from evaluators import SubmissionEvaluator
 from models import JudgeRequest, JudgeResult, MachineType, ResourceSpecification
-from protocol.judge_protocol_handler import protocol_dict
+from protocol.judge.commands.start_command import StartCommand
+from protocol.judge_protocol_handler import (
+    get_protocol_from_machine_name,
+    is_machine_name_connected,
+)
 
 # Initialize the logger
 logger = main_logger.getChild("azureevaluator")
@@ -221,6 +225,12 @@ class JudgeVMSS:
                 avm = await self.azure.get_vm(vm.name)
                 machine_name = avm.os_profile.computer_name
 
+                if not is_machine_name_connected(machine_name):
+                    logger.info(f"Waiting for VM {vm.name} with machine name {machine_name} to connect")
+                    while not is_machine_name_connected(machine_name): # TODO: notification from judge protocol handler instead of polling
+                        await asyncio.sleep(1)
+                        # TODO: implement timeout
+
                 # Create and safe vm class
                 judgevm = JudgeVM(vm, machine_name, self.azure)
                 self.judgevm_dict[vm.name] = judgevm
@@ -280,7 +290,7 @@ class JudgeVM:
         # Check cpu, gpu and memory capacity of vm and return true if there is enough capacity
         if self.free_cpu >= resource_allocation.num_cpu and self.free_gpu >= resource_allocation.num_gpu and self.free_memory >= resource_allocation.num_memory:
             return True
-        
+
         return False
 
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
@@ -288,15 +298,14 @@ class JudgeVM:
         # TODO: keep track of free resources
         logger.info(f"Submitting judge request {judge_request} to VM {self.vm.name} / {self.machine_name}")
 
-        while self.machine_name not in protocol_dict:
-            print('waiting for VM to connect', protocol_dict)
-            await asyncio.sleep(1)
+        protocol = get_protocol_from_machine_name(self.machine_name)
 
-        protocol = protocol_dict[self.machine_name]
+        command = StartCommand()
+        protocol.send_command(command, True)
 
-        print('protocol', protocol)
+        result = command.result
 
-        return JudgeResult("nothing to see here")
+        return JudgeResult(result)
 
     async def alive(self):
         # TODO check if self.vm is actually still alive (decreasing capacity in vmss can remove it, or by calling delete_vm)

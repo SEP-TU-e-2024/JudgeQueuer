@@ -14,4 +14,5 @@ class StartCommand(Command):
         super().__init__(name="START")
 
     def response(self, response: dict):
-        pass
+        print("Got VM response:", response)
+        self.result = response["result"]
