@@ -38,9 +38,10 @@ def handle_connection(connection: Connection):
         machine_name = command.machine_name
 
         # Store the protocol in the protocol_dict with its machine name
-        if machine_name in protocol_dict:
-            raise Exception("Runner with the same machine name is already connected")
-        protocol_dict[machine_name] = protocol
+        with protocol_dict_lock:
+            if machine_name in protocol_dict:
+                raise Exception("Runner with the same machine name is already connected")
+            protocol_dict[machine_name] = protocol
         logger.info(f"Accepted connection from runner with machine name {machine_name}")
 
         # Add close listener to remove the protocol from the protocol_dict when the runner disconnects
