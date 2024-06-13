@@ -27,8 +27,9 @@ class StartCommand(Command):
         resource_specification = ResourceSpecification(num_cpu=args["cpus"],
                                                        num_memory=args["memory"],
                                                        num_gpu=args["gpus"],
-                                                       machine_type=machine_type)
-        submission = Submission(submission_type, args["source_url"])
+                                                       machine_type=machine_type,
+                                                       time_limit=args["time_limit"])
+        submission = Submission(submission_type, args["source_url"], args["validator_url"])
         judge_request = JudgeRequest(submission, resource_specification)
 
         # Submit the request to the evaluator

@@ -4,11 +4,12 @@ This module contains the JudgeProtocol class.
 
 import threading
 from queue import Queue
+from typing import Callable
 
 from custom_logger import main_logger
 from protocol import Connection, Protocol
 
-from .commands import Commands
+from .commands import Command
 
 logger = main_logger.getChild("protocol.judge")
 
@@ -22,6 +23,8 @@ class JudgeProtocol(Protocol):
     queue_dict_lock: threading.Lock
     queue_dict: dict[str, Queue[dict]]
     receiver_thread: threading.Thread
+    close_listener: Callable = None
+    close_listener_args: tuple = ()
 
     def __init__(self, connection: Connection):
         self.connection = connection
@@ -31,23 +34,35 @@ class JudgeProtocol(Protocol):
         self.receiver_thread = threading.Thread(target=self._receiver, daemon=True)
         self.receiver_thread.start()
 
+    def set_close_listener(self, close_listener: Callable, close_listener_args: tuple = ()):
+        if self.close_listener is not None:
+            raise ValueError("Close listener is already set!")
+
+        self.close_listener = close_listener
+        self.close_listener_args = close_listener_args
+
     def _receiver(self):
         """
         Receives and handles responses from the runner.
         """
 
-        while True:
-            message_id, response = self._receive_response()
+        try:
+            while True:
+                message_id, response = self._receive_response()
 
-            with self.queue_dict_lock:
-                if message_id not in self.queue_dict:
-                    logger.error(
-                        f"Received response from {self.connection.ip}:{self.connection.port} with unknown message id: {message_id}"
-                    )
-                    continue
-                self.queue_dict[message_id].put(response)
+                with self.queue_dict_lock:
+                    if message_id not in self.queue_dict:
+                        logger.error(
+                            f"Received response from {self.connection.ip}:{self.connection.port} with unknown message id: {message_id}"
+                        )
+                        continue
+                    self.queue_dict[message_id].put(response)
+        finally:
+            # Call close listener
+            if self.close_listener is not None:
+                self.close_listener(*self.close_listener_args)
 
-    def send_command(self, command: Commands, block: bool = False, **kwargs):
+    def send_command(self, command: Command, block: bool = False, **kwargs):
         """
         Sends a given command with the given arguments to the runner specifed in the connection.
         """
@@ -60,7 +75,7 @@ class JudgeProtocol(Protocol):
             target=self._send_command, args=(command,), kwargs=kwargs, daemon=True
         ).start()
 
-    def _send_command(self, command: Commands, **kwargs):
+    def _send_command(self, command: Command, **kwargs):
         """
         Send command to the runner and wait for the response.
         """
@@ -79,7 +94,7 @@ class JudgeProtocol(Protocol):
             )
             response = queue.get()
 
-            command.value.response(response)
+            command.response(response)
 
         except Exception:
             logger.error(

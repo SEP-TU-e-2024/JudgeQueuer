@@ -37,12 +37,14 @@ class ResourceSpecification:
     num_memory: int
     num_gpu: int
     machine_type: 'MachineType'
+    time_limit: int # in seconds
 
-    def __init__(self, num_cpu: int, num_memory: int, num_gpu: int, machine_type: 'MachineType'):
+    def __init__(self, num_cpu: int, num_memory: int, num_gpu: int, machine_type: 'MachineType', time_limit: int):
         self.num_cpu = num_cpu
         self.num_memory = num_memory # in MB
         self.num_gpu = num_gpu
         self.machine_type = machine_type
+        self.time_limit = time_limit
 
 class SubmissionType(Enum):
     """
@@ -58,10 +60,12 @@ class Submission:
     """
     type: 'SubmissionType'
     source_url: str
+    validator_url: str
 
-    def __init__(self, type: 'SubmissionType', source_url: str):
+    def __init__(self, type: 'SubmissionType', source_url: str, validator_url: str):
         self.type = type
         self.source_url = source_url
+        self.validator_url = validator_url
 
 class JudgeRequest:
     """

@@ -10,8 +10,10 @@ class CheckCommand(Command):
     The CheckCommand class is used to check the status of the runner.
     """
 
-    @staticmethod
-    def response(response: dict):
+    def __init__(self):
+        super().__init__(name="CHECK")
+
+    def response(self, response: dict):
         if response["status"] is None:
             raise ValueError("Received message with missing status!")
 
