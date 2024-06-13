@@ -76,8 +76,6 @@ def establish_connection(host, port):
 
         connection = Connection(addr[0], addr[1], client_sock, threading.Lock())
         handle_connection(connection)
-        # thread = threading.Thread(target=handle_connection, args=(connection,), daemon=True)
-        # thread.start()
 
 def start_handler(host, port) -> threading.Thread:
     thread = threading.Thread(target=establish_connection, args=(host, port), daemon=True)
