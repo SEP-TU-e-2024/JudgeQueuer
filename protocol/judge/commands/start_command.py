@@ -15,4 +15,4 @@ class StartCommand(Command):
 
     def response(self, response: dict):
         print("Got VM response:", response)
-        self.result = response["result"]
+        self.result = response["results"]

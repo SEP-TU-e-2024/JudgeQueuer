@@ -48,7 +48,7 @@ async def main():
     website_thread.join()
 
 async def send_test_submission():
-    submission = Submission(1, "https://storagebenchlab.blob.core.windows.net/submissions/0d9485d4-eeb6-40e5-a098-83964a32bf6f.zip")
+    submission = Submission(1, "https://storagebenchlab.blob.core.windows.net/submissions/submission.zip", "https://storagebenchlab.blob.core.windows.net/validators/validator.zip")
     machine_type = MachineType("Standard_B1s", "Standard")
     resource_allocation = ResourceSpecification(num_cpu=1, num_memory=10, num_gpu=0, machine_type=machine_type, time_limit=30)
     judge_request = JudgeRequest(submission, resource_allocation)
