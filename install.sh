@@ -2,10 +2,6 @@
 
 set -e
 
-# Install Azure CLI
-curl -sL https://aka.ms/InstallAzureCLIDeb | bash
-az login
-
 # Install Python and dependencies
 echo "-- Installing Python and dependencies"
 apt-get update
