@@ -138,7 +138,7 @@ class JudgeVMSS:
         # Get a right vm that is available
         vm = await self.check_available_vm(resource_allocation)
 
-        # If no available vm than add capacity
+        # If no available vm then add capacity
         if vm is None:
             logger.info("No VM available, increasing capacity...")
             # Get available vm after the added capacity, error if no available

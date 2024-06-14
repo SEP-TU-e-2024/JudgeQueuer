@@ -4,3 +4,5 @@ azure-mgmt-resource==23.*
 azure-identity==1.*
 aiohttp==3.*
 python-dotenv==1.0.*
+pytest==8.2.2
+azure-storage-blob==12.20.0
