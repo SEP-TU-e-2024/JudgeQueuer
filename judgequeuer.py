@@ -1,3 +1,4 @@
+#!/usr/bin/env python3.12
 from dotenv import load_dotenv
 
 # Initialize environment variables from the `.env` file
