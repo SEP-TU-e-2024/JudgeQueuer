@@ -17,6 +17,7 @@ AZURE_VMAPP_RESOURCE_GROUP = "BenchLab"
 AZURE_VMAPP_GALLERY = "runner_container_gallery"
 AZURE_VMAPP_NAME = "runner_container_application"
 AZURE_VMAPP_VERSION = "latest"
+WEBSITE_HOST = "localhost"
 ```
 
 To find your subscription ID, go to the Subscriptions page on the Azure portal. Here, select the subscription which you want the system to operate under, and it will say the Subscription ID at the top of the page.
