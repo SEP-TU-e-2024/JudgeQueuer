@@ -36,5 +36,5 @@ class TestCounter:
         #Make sure that each individual generate() method got called succesfully
         assert self.counter.generate() == 5
         #Close all of the threads
-        for i in threads():
+        for i in threads:
             i.join()
