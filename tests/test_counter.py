@@ -2,6 +2,7 @@ import threading
 
 from protocol.counter import Counter
 
+
 #Example unit tests
 class TestCounter:
     """Tests for the Counter class"""
