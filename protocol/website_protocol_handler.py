@@ -49,15 +49,15 @@ class ProtocolHandler:
                 logger.info(f"Started listening for the Website connection on {self.host}:{self.port}...")
 
                 client_sock, addr = sock.accept()
-                logger.info(f"Received connection attempt from {addr[0]}:{addr[1]}.")
+                logger.info(f"Received website connection from {addr[0]}:{addr[1]}.")
 
-                connection = Connection(addr[0], addr[1], client_sock, threading.Lock())
+                self.connection = Connection(addr[0], addr[1], client_sock, threading.Lock())
                 self.protocol = WebsiteProtocol(self.connection)
-                self._handle_commands(connection)
+                self._handle_commands()
 
             except (ConnectionRefusedError, ConnectionResetError) as e:
                 self.connection = None
-                logger.info(f"An error has occured! ({e})")
+                logger.info(f"Website disconnected! ({e})")
 
             finally:
                 self.stop()
