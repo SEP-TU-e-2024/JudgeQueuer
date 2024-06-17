@@ -28,7 +28,7 @@ class StartCommand(Command):
 
         # Extract relevant part of the evaluation settings
         machine_type = MachineType.from_name(evaluation_settings["machine_type"])
-        cpus = evaluation_settings["cpus"]
+        cpus = evaluation_settings["cpu"]
         memory = evaluation_settings["memory"]
 
         # Form models for the judge request
