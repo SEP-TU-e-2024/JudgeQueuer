@@ -11,7 +11,7 @@ import os
 from azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from custom_logger import main_logger
-from models import JudgeRequest, MachineType, ResourceSpecification, Submission
+from models import JudgeRequest, MachineType, Submission
 from protocol import judge_protocol_handler, website_protocol_handler
 
 # Initialize the logger
@@ -51,8 +51,8 @@ async def main():
 async def send_test_submission():
     submission = Submission(1, "https://storagebenchlab.blob.core.windows.net/submissions/submission.zip", "https://storagebenchlab.blob.core.windows.net/validators/validator.zip")
     machine_type = MachineType("Standard_B1s", "Standard")
-    resource_allocation = ResourceSpecification(num_cpu=1, num_memory=10, num_gpu=0, machine_type=machine_type, time_limit=30)
-    judge_request = JudgeRequest(submission, resource_allocation)
+    # TODO sample data from website
+    judge_request = JudgeRequest(submission, machine_type, cpus=1, memory=10, evaluation_settings={}, benchmark_instances={})
 
     # Test out submitting judge request
     logger.info("Submitting judge request...")

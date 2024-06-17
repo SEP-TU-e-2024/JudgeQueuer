@@ -6,7 +6,7 @@ from azure.mgmt.compute.models import VirtualMachineScaleSet, VirtualMachineScal
 from azurewrap import Azure
 from custom_logger import main_logger
 from evaluators import SubmissionEvaluator
-from models import JudgeRequest, JudgeResult, MachineType, ResourceSpecification
+from models import JudgeRequest, JudgeResult, MachineType
 from protocol.judge.commands.start_command import StartCommand
 from protocol.judge_protocol_handler import (
     get_protocol_from_machine_name,
@@ -75,7 +75,7 @@ class AzureEvaluator(SubmissionEvaluator):
         logger.info(f"Starting of submission for judge request {judge_request}")
 
         # Get the right VMSS, or make one if needed
-        machine_type = judge_request.resource_specification.machine_type
+        machine_type = judge_request.machine_type
         if machine_type in self.judgevmss_dict:
             judgevmss = self.judgevmss_dict[machine_type]
         else:
@@ -133,10 +133,9 @@ class JudgeVMSS:
         """
         Handle the request for this machine type vmss, an available vm will be found/created and assigned.
         """
-        resource_allocation = judge_request.resource_specification
 
         # Get a right vm that is available
-        vm = await self.check_available_vm(resource_allocation)
+        vm = await self.check_available_vm(judge_request.cpus, judge_request.memory)
 
         # If no available vm than add capacity
         if vm is None:
@@ -145,7 +144,7 @@ class JudgeVMSS:
             await self.add_capacity()
 
             # TODO: if concurrency, this may give issues (between line above and below, other thread may have used new capacity, so it is no longer available)
-            vm = await self.check_available_vm(resource_allocation)
+            vm = await self.check_available_vm(judge_request.cpus, judge_request.memory)
 
             if vm is None:
                 raise Exception("No vm available for judge request, even after adding capacity")
@@ -192,7 +191,7 @@ class JudgeVMSS:
 
         return judge_result
     
-    async def check_available_vm(self, resource_allocation: ResourceSpecification) -> VirtualMachineScaleSetVM | None:
+    async def check_available_vm(self, cpus: int, memory: int) -> VirtualMachineScaleSetVM | None:
         """
         Goes through list of vms in this vmss and checks whether they have enough capacity to take on the resource allocation.
         Returns a vm with enough capacity or None if there is none.
@@ -206,7 +205,7 @@ class JudgeVMSS:
             judgevm = self.judgevm_dict[vm_name]
         
             # Check if there is enough free resource capacity on this vm
-            if await judgevm.check_capacity(resource_allocation):
+            if await judgevm.check_capacity(cpus, memory):
                 return judgevm.vm
             
         # No vm found
@@ -282,13 +281,12 @@ class JudgeVM:
         self.free_gpu = 2
         self.free_memory = 50
     
-    async def check_capacity(self, resource_allocation: ResourceSpecification) -> bool:
+    async def check_capacity(self, cpus: int, memory: int) -> bool:
         """
         Check whether this vm has enough capacity to take on the resource allocation
         """
-        # TODO implement check for capacity
         # Check cpu, gpu and memory capacity of vm and return true if there is enough capacity
-        if self.free_cpu >= resource_allocation.num_cpu and self.free_gpu >= resource_allocation.num_gpu and self.free_memory >= resource_allocation.num_memory:
+        if self.free_cpu >= cpus and self.free_memory >= memory:
             return True
 
         return False
@@ -302,8 +300,10 @@ class JudgeVM:
 
         command = StartCommand()
         protocol.send_command(command, True,
-                              submission=judge_request.submission.source_url,
-                              validator=judge_request.submission.validator_url)
+                              evaluation_settings=judge_request.evaluation_settings,
+                              benchmark_instances=judge_request.benchmark_instances,
+                              submission_url=judge_request.submission.source_url,
+                              validator_url=judge_request.submission.validator_url)
 
         result = command.result
 

@@ -3,7 +3,6 @@ from custom_logger import main_logger
 from models import (
     JudgeRequest,
     MachineType,
-    ResourceSpecification,
     Submission,
     SubmissionType,
 )
@@ -22,15 +21,20 @@ class StartCommand(Command):
     @staticmethod
     async def execute(args: dict):
         # Deserialization of the arguments
-        machine_type = MachineType.from_name(args["machine_type"])
-        submission_type = {"code": SubmissionType.CODE, "solution": SubmissionType.SOLUTION}[args["submission_type"]]
-        resource_specification = ResourceSpecification(num_cpu=args["cpus"],
-                                                       num_memory=args["memory"],
-                                                       num_gpu=args["gpus"],
-                                                       machine_type=machine_type,
-                                                       time_limit=args["time_limit"])
-        submission = Submission(submission_type, args["source_url"], args["validator_url"])
-        judge_request = JudgeRequest(submission, resource_specification)
+        evaluation_settings: dict = args["evaluation_settings"]
+        benchmark_instances: dict[str, str] = args["benchmark_instances"] # dict of ID to URL
+        submission_url: str = args["submission_url"]
+        validator_url: str = args["validator_url"]
+
+        # Extract relevant part of the evaluation settings
+        machine_type = MachineType.from_name(evaluation_settings["machine_type"])
+        cpus = evaluation_settings["cpus"]
+        memory = evaluation_settings["memory"]
+
+        # Form models for the judge request
+        submission_type = SubmissionType.CODE
+        submission = Submission(submission_type, submission_url, validator_url)
+        judge_request = JudgeRequest(submission, machine_type, cpus, memory, evaluation_settings, benchmark_instances)
 
         # Submit the request to the evaluator
         try:
