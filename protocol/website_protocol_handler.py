@@ -5,7 +5,6 @@ The main class of the website protocol server. It handles the connection to the 
 import asyncio
 import socket
 import threading
-from time import sleep
 
 from custom_logger import main_logger
 
@@ -14,8 +13,9 @@ from .website.website_protocol import WebsiteProtocol
 
 logger = main_logger.getChild("website_protocol_handler")
 
+
 class ProtocolHandler:
-    ip: str
+    host: str
     port: int
     connect_retry_timeout: float
     debug: bool
@@ -23,8 +23,8 @@ class ProtocolHandler:
     connection: Connection
     protocol: WebsiteProtocol
 
-    def __init__(self, ip: str, port: int, connect_retry_timeout: float = 5, debug: bool = False):
-        self.ip = ip
+    def __init__(self, host: str, port: int, connect_retry_timeout: float = 5, debug: bool = False):
+        self.host = host
         self.port = port
         self.connect_retry_timeout = connect_retry_timeout
         self.debug = debug
@@ -35,20 +35,29 @@ class ProtocolHandler:
         Starts the connection to the website server. In case of a unexpected disconnection, it retries to connect.
         """
 
-        logger.info(f"Trying to connect to the website server at {self.ip}:{self.port} ...")
-
         while True:
             try:
+                # Define the socket and bind it to the given host and port
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((self.ip, self.port))
-                self.connection = Connection(self.ip, self.port, sock, threading.Lock())
+
+                # Allow the socket to be reused after the program exits without waiting for the default timeout
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+                sock.bind((self.host, self.port))
+                sock.listen(1)
+
+                logger.info(f"Started listening for the Website connection on {self.host}:{self.port}...")
+
+                client_sock, addr = sock.accept()
+                logger.info(f"Received connection attempt from {addr[0]}:{addr[1]}.")
+
+                connection = Connection(addr[0], addr[1], client_sock, threading.Lock())
                 self.protocol = WebsiteProtocol(self.connection)
-                self._handle_commands()
+                self._handle_commands(connection)
 
             except (ConnectionRefusedError, ConnectionResetError) as e:
                 self.connection = None
-                logger.info(f"Failed to connect to website server. Retrying in {self.connect_retry_timeout} seconds... ({e})")
-                sleep(self.connect_retry_timeout)
+                logger.info(f"An error has occured! ({e})")
 
             finally:
                 self.stop()
@@ -71,6 +80,7 @@ class ProtocolHandler:
         """
         Runs the given future in a separate thread, returning the thread object.
         """
+
         # Entrypoint for command execution thread, sets event loop and runs with the future until completion
         def run_event_loop(loop: asyncio.AbstractEventLoop, future):
             asyncio.set_event_loop(loop)
@@ -80,9 +90,7 @@ class ProtocolHandler:
         new_loop = asyncio.new_event_loop()
 
         # Start the event loop in a new thread, starting the command handling future
-        thread = threading.Thread(target=run_event_loop,
-                                    args=(new_loop, future),
-                                    daemon=True)
+        thread = threading.Thread(target=run_event_loop, args=(new_loop, future), daemon=True)
         thread.start()
 
         return thread
@@ -100,6 +108,7 @@ class ProtocolHandler:
             sock.shutdown(socket.SHUT_RDWR)
             sock.close()
         self.connection = None
+
 
 def start_handler(host, port) -> threading.Thread:
     protocol_handler = ProtocolHandler(host, port)

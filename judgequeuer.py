@@ -28,7 +28,7 @@ ae = AzureEvaluator(azure)
 # Initiate protocol constants
 JUDGE_PROTOCOL_HOST = "0.0.0.0"
 JUDGE_PROTOCOL_PORT = 12345
-WEBSITE_PROTOCOL_HOST = os.getenv("WEBSITE_HOST")
+WEBSITE_PROTOCOL_HOST = "0.0.0.0"
 WEBSITE_PROTOCOL_PORT = 30000
 
 
