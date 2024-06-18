@@ -58,11 +58,9 @@ async def send_test_submission():
 		"machine_type":"Standard_B1s"
 	}
     benchmark_instancs = {
-		"706e2604-224a-4c3e-8b1c-f9418200c232":"https://storagebenchlab.blob.core.windows.net/benchmark-instances-vrptw-homberger-200/C1_2_1.200.20.vrptw",
-		"7e36136f-2462-4273-85ee-2e6a641b4198":"https://storagebenchlab.blob.core.windows.net/benchmark-instances-vrptw-homberger-200/C1_2_1.200.20.vrptw",
-		"8bb927b2-8904-45db-bc1d-2ac2daf61d10":"https://storagebenchlab.blob.core.windows.net/benchmark-instances-vrptw-homberger-200/C1_2_1.200.20.vrptw",
-		"bf8756f8-95a9-4d24-a0d4-e74bf49cecbb":"https://storagebenchlab.blob.core.windows.net/benchmark-instances-vrptw-homberger-200/C1_2_1.200.20.vrptw"
-	}
+        '0a800b64-0cce-4cb2-95ab-39a5064ece4e': 'https://storagebenchlab.blob.core.windows.net/benchmark-instances-test-validator/instance2.txt',
+        '83a8977e-760a-4d44-9a67-e07ca4d4c155': 'https://storagebenchlab.blob.core.windows.net/benchmark-instances-test-validator/instance1.txt'
+    }
     judge_request = JudgeRequest(submission, machine_type, cpus=1, memory=256, evaluation_settings=evaluation_settings, benchmark_instances=benchmark_instancs)
 
     # Test out submitting judge request
