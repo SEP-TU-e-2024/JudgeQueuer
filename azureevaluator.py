@@ -270,6 +270,7 @@ class JudgeVM:
     free_cpu: int
     free_gpu: int
     free_memory: int
+    tasks = []
 
     def __init__(self, vm: VirtualMachineScaleSetVM, machine_name: str, azure: Azure):
         self.vm = vm
@@ -298,16 +299,24 @@ class JudgeVM:
 
         protocol = get_protocol_from_machine_name(self.machine_name)
 
-        command = StartCommand()
-        protocol.send_command(command, True,
-                              evaluation_settings=judge_request.evaluation_settings,
-                              benchmark_instances=judge_request.benchmark_instances,
-                              submission_url=judge_request.submission.source_url,
-                              validator_url=judge_request.submission.validator_url)
+        try:
+            self.tasks.append(judge_request)
 
-        result = command.result
+            command = StartCommand()
+            protocol.send_command(command, True,
+                                evaluation_settings=judge_request.evaluation_settings,
+                                benchmark_instances=judge_request.benchmark_instances,
+                                submission_url=judge_request.submission.source_url,
+                                validator_url=judge_request.submission.validator_url)
 
-        return JudgeResult(result)
+            result = command.result
+
+            return JudgeResult(result)
+        finally:
+            self.tasks.remove(judge_request)
+
+    def is_busy(self):
+        return len(self.tasks) > 0
 
     async def alive(self):
         # TODO check if self.vm is actually still alive (decreasing capacity in vmss can remove it, or by calling delete_vm)
