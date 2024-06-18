@@ -51,8 +51,19 @@ async def main():
 async def send_test_submission():
     submission = Submission(1, "https://storagebenchlab.blob.core.windows.net/submissions/submission.zip", "https://storagebenchlab.blob.core.windows.net/validators/validator.zip")
     machine_type = MachineType("Standard_B1s", "Standard")
-    # TODO sample data from website
-    judge_request = JudgeRequest(submission, machine_type, cpus=1, memory=10, evaluation_settings={}, benchmark_instances={})
+    evaluation_settings = {
+        "cpu":1,
+		"time_limit":60.0,
+		"memory":256,
+		"machine_type":"Standard_B1s"
+	}
+    benchmark_instancs = {
+		"706e2604-224a-4c3e-8b1c-f9418200c232":"https://storagebenchlab.blob.core.windows.net/benchmark-instances-vrptw-homberger-200/C1_2_1.200.20.vrptw",
+		"7e36136f-2462-4273-85ee-2e6a641b4198":"https://storagebenchlab.blob.core.windows.net/benchmark-instances-vrptw-homberger-200/C1_2_1.200.20.vrptw",
+		"8bb927b2-8904-45db-bc1d-2ac2daf61d10":"https://storagebenchlab.blob.core.windows.net/benchmark-instances-vrptw-homberger-200/C1_2_1.200.20.vrptw",
+		"bf8756f8-95a9-4d24-a0d4-e74bf49cecbb":"https://storagebenchlab.blob.core.windows.net/benchmark-instances-vrptw-homberger-200/C1_2_1.200.20.vrptw"
+	}
+    judge_request = JudgeRequest(submission, machine_type, cpus=1, memory=256, evaluation_settings=evaluation_settings, benchmark_instances=benchmark_instancs)
 
     # Test out submitting judge request
     logger.info("Submitting judge request...")
