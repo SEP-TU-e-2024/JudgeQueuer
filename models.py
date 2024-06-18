@@ -66,7 +66,7 @@ class JudgeRequest:
         self.machine_type = machine_type
         self.cpus = cpus
         self.memory = memory
-        self.evalution_settings = evaluation_settings
+        self.evaluation_settings = evaluation_settings
         self.benchmark_instances = benchmark_instances
 
 class JudgeResult:
