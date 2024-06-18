@@ -18,13 +18,16 @@ protocol_dict: dict[str, JudgeProtocol] = {}
 Stores all protocols by the runner's hostname.
 """
 
+
 def is_machine_name_connected(machine_name: str) -> bool:
     with protocol_dict_lock:
         return machine_name in protocol_dict
 
+
 def get_protocol_from_machine_name(machine_name: str) -> JudgeProtocol:
     with protocol_dict_lock:
         return protocol_dict[machine_name]
+
 
 def handle_connection(connection: Connection):
     # Instantiate the protocol
@@ -57,14 +60,15 @@ def handle_connection(connection: Connection):
             exc_info=1,
         )
 
+
 def establish_connection(host, port):
     # Define the socket and bind it to the given host and port
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind((host, port))
 
     # Allow the socket to be reused after the program exits without waiting for the default timeout
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    sock.bind((host, port))
 
     sock.listen(1000)
 
@@ -76,6 +80,7 @@ def establish_connection(host, port):
 
         connection = Connection(addr[0], addr[1], client_sock, threading.Lock())
         handle_connection(connection)
+
 
 def start_handler(host, port) -> threading.Thread:
     thread = threading.Thread(target=establish_connection, args=(host, port), daemon=True)
