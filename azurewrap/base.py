@@ -118,6 +118,23 @@ class Azure:
         """
         return await self.compute_client.virtual_machines.get(self.resource_group_name, name)
 
+    async def get_vm_size(self, vm_name: str):
+        # Get the VM details
+        vm = await self.compute_client.virtual_machines.get(self.resource_group_name, vm_name)
+
+        # Get the VM size (hardware profile)
+        vm_size = vm.hardware_profile.vm_size
+
+        # Use the vm_size to get the VM size details
+        vm_sizes = self.compute_client.virtual_machine_sizes.list(location=vm.location)
+        async for size in vm_sizes:
+            if size.name == vm_size:
+                cpu_cores = size.number_of_cores
+                memory_in_mb = size.memory_in_mb
+                return cpu_cores, memory_in_mb
+        
+        raise ValueError("VM Size not found")
+
     #
     # Modification functions
     #
