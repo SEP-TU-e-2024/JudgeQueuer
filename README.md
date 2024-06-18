@@ -65,4 +65,4 @@ Adding new unit tests:
 
 This methodology allows us to neatly separate separate unit tests into different files. They will be automatically discovered when running the testing command. 
 
-You can also check the `test_couter.py` for an example of this.
+You can also check the `test_counter.py` for an example of this.
