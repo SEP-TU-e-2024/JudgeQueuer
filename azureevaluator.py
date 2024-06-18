@@ -1,7 +1,11 @@
 import asyncio
 import os
 
-from azure.mgmt.compute.models import VirtualMachineScaleSet, VirtualMachineScaleSetVM
+from azure.mgmt.compute.models import (
+    VirtualMachine,
+    VirtualMachineScaleSet,
+    VirtualMachineScaleSetVM,
+)
 
 from azurewrap import Azure
 from custom_logger import main_logger
@@ -155,6 +159,7 @@ class JudgeVMSS:
 
         # Downsize capacity if low usage
         if not judgevm.is_busy():
+            # TODO make sure this doesnt give concurrency issues
             self.azure.delete_vm(vm.name, vmss_name=self.vmss.name)
 
         return judge_result
@@ -225,7 +230,7 @@ class JudgeVMSS:
                         # TODO: implement timeout
 
                 # Create and safe vm class
-                judgevm = JudgeVM(vm, machine_name, self.azure)
+                judgevm = JudgeVM(vm, avm, machine_name, self.azure)
                 self.judgevm_dict[vm.name] = judgevm
 
         for key in list(self.judgevm_dict):
@@ -259,6 +264,7 @@ class JudgeVM:
     An Azure Virtual Machine.
     """
     vm: VirtualMachineScaleSetVM
+    avm: VirtualMachine
     machine_name: str
     azure: Azure
     free_cpu: int
@@ -266,10 +272,10 @@ class JudgeVM:
     free_memory: int
     tasks = []
 
-    def __init__(self, vm: VirtualMachineScaleSetVM, machine_name: str, azure: Azure):
+    def __init__(self, vm: VirtualMachineScaleSetVM, avm: VirtualMachine, machine_name: str, azure: Azure):
         self.vm = vm
+        self.avm = avm
         self.machine_name = machine_name
-        # TODO keep track of whether this vm can be deleted (or is bussy)
         self.azure = azure
         # TODO replace hardcoded values (if possible, get from `vm`)
         self.free_cpu = 10
@@ -288,7 +294,6 @@ class JudgeVM:
 
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
         # TODO: communicate the judge request to the VM and monitor status
-        # TODO: keep track of free resources
         logger.info(f"Submitting judge request {judge_request} to VM {self.vm.name} / {self.machine_name}")
 
         protocol = get_protocol_from_machine_name(self.machine_name)
