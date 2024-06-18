@@ -150,9 +150,12 @@ class JudgeVMSS:
                 raise Exception("No vm available for judge request, even after adding capacity")
 
         # Submit using the vm the judge request
-        judge_result = await self.submit_vm(vm, judge_request)
+        judgevm = self.judgevm_dict[vm.name]
+        judge_result = await judgevm.submit(judge_request)
 
-        # TODO: possibly downsize capacity if low usage
+        # Downsize capacity if low usage
+        if not judgevm.is_busy():
+            self.azure.delete_vm(vm.name, vmss_name=self.vmss.name)
 
         return judge_result
 
@@ -181,16 +184,7 @@ class JudgeVMSS:
 
         # Update vm_dict, vm(s) could have been deleted
         await self.__update_vm_dict()
-    
-    async def submit_vm(self, vm: VirtualMachineScaleSetVM, judge_request: JudgeRequest) -> JudgeResult:
-        """
-        Submit a judgeRequest to a vm, will pass the request on to the corresponding judgeVM class to handle.
-        """
-        judgevm = self.judgevm_dict[vm.name]
-        judge_result = await judgevm.submit(judge_request)
 
-        return judge_result
-    
     async def check_available_vm(self, cpus: int, memory: int) -> VirtualMachineScaleSetVM | None:
         """
         Goes through list of vms in this vmss and checks whether they have enough capacity to take on the resource allocation.
