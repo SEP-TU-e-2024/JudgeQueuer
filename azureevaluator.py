@@ -2,7 +2,6 @@ import asyncio
 import os
 
 from azure.mgmt.compute.models import (
-    VirtualMachine,
     VirtualMachineScaleSet,
     VirtualMachineScaleSetVM,
 )
@@ -229,8 +228,10 @@ class JudgeVMSS:
                         await asyncio.sleep(1)
                         # TODO: implement timeout
 
+                cpus, memory = await self.azure.get_vm_size(vm.name)
+                
                 # Create and safe vm class
-                judgevm = JudgeVM(vm, avm, machine_name, self.azure)
+                judgevm = JudgeVM(vm, machine_name, self.azure, cpus, memory)
                 self.judgevm_dict[vm.name] = judgevm
 
         for key in list(self.judgevm_dict):
@@ -264,23 +265,18 @@ class JudgeVM:
     An Azure Virtual Machine.
     """
     vm: VirtualMachineScaleSetVM
-    avm: VirtualMachine
     machine_name: str
     azure: Azure
     free_cpu: int
-    free_gpu: int
     free_memory: int
     tasks = []
 
-    def __init__(self, vm: VirtualMachineScaleSetVM, avm: VirtualMachine, machine_name: str, azure: Azure):
+    def __init__(self, vm: VirtualMachineScaleSetVM, machine_name: str, azure: Azure, cpus: int, memory: int):
         self.vm = vm
-        self.avm = avm
         self.machine_name = machine_name
         self.azure = azure
-        # TODO replace hardcoded values (if possible, get from `vm`)
-        self.free_cpu = 10
-        self.free_gpu = 2
-        self.free_memory = 50
+        self.free_cpu = cpus
+        self.free_memory = memory
     
     async def check_capacity(self, cpus: int, memory: int) -> bool:
         """
