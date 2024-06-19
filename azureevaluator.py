@@ -283,14 +283,19 @@ class JudgeVM:
 
             command = StartCommand()
             protocol.send_command(command, True,
-                                evaluation_settings=judge_request.evaluation_settings,
-                                benchmark_instances=judge_request.benchmark_instances,
-                                submission_url=judge_request.submission.source_url,
-                                validator_url=judge_request.submission.validator_url)
+                                  evaluation_settings=judge_request.evaluation_settings,
+                                  benchmark_instances=judge_request.benchmark_instances,
+                                  submission_url=judge_request.submission.source_url,
+                                  validator_url=judge_request.submission.validator_url)
 
-            result = command.result
+            if command.success:
+                result = command.result
 
-            return JudgeResult(result)
+                return JudgeResult.success(result)
+            else:
+                cause = command.cause
+
+                return JudgeResult.error(cause)
         finally:
             self.tasks.remove(judge_request)
 

@@ -40,8 +40,11 @@ class StartCommand(Command):
         try:
             judge_result = await azureevaluator.get_instance().submit(judge_request)
 
-            return {"status": "ok", "result": judge_result.result}
+            if judge_result.result is not None:
+                return {"status": "ok", "result": judge_result.result}
+            else:
+                return {"status": "error", "cause": judge_result.cause}
         except Exception:
             logger.error("An unexpected error has occured while trying to submit a judge request to the evaluator", exc_info=1)
 
-            return {"status": "error"}
+            return {"status": "error", "cause": "judge_internal_error"}

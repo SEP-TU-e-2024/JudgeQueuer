@@ -66,7 +66,7 @@ async def send_test_submission():
     # Test out submitting judge request
     logger.info("Submitting judge request...")
     judge_result = await ae.submit(judge_request)
-    logger.info(f"Received VM judge result {judge_result.result}")
+    logger.info(f"Received VM judge result {judge_result}")
 
 if __name__ == "__main__":
     # Wrap main to make sure all Azure objects are closed properly
