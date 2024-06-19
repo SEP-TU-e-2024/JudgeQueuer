@@ -152,8 +152,9 @@ class JudgeVMSS:
 
         # Downsize capacity if low usage
         if not judgevm.is_busy():
+            logger.info(f"Deleting VM {vm.name} because it is idle")
             # TODO make sure this doesnt give concurrency issues
-            self.azure.delete_vm(vm.name, vmss_name=self.vmss.name)
+            await self.azure.delete_vm(vm.name, vmss_name=self.vmss.name, block=False)
 
         return judge_result
 
@@ -219,6 +220,7 @@ class JudgeVMSS:
             judgevm = self.judgevm_dict[key]
             # Check if the vms in the dictionary are still alive
             if not await judgevm.alive():
+                logger.info(f"Deleting VM {key} because it is no longer alive")
                 # Remove judgevm from dictionary
                 self.judgevm_dict.pop(key)
                 # Delete the VM
