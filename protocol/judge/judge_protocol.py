@@ -62,20 +62,20 @@ class JudgeProtocol(Protocol):
             if self.close_listener is not None:
                 self.close_listener(*self.close_listener_args)
 
-    def send_command(self, command: Command, block: bool = False, **kwargs):
+    def send_command(self, command: Command, block: bool = False, timeout: float = None, **kwargs):
         """
         Sends a given command with the given arguments to the runner specifed in the connection.
         """
 
         if block:
-            self._send_command(command, **kwargs)
+            self._send_command(command, timeout, **kwargs)
             return
 
         threading.Thread(
-            target=self._send_command, args=(command,), kwargs=kwargs, daemon=True
+            target=self._send_command, args=(command, timeout), kwargs=kwargs, daemon=True
         ).start()
 
-    def _send_command(self, command: Command, **kwargs):
+    def _send_command(self, command: Command, timeout: float = None, **kwargs):
         """
         Send command to the runner and wait for the response.
         """
@@ -92,7 +92,7 @@ class JudgeProtocol(Protocol):
             logger.info(
                 f"Sent command {command.name} with args {kwargs} to the runner located at {self.connection.ip}:{self.connection.port}."
             )
-            response = queue.get()
+            response = queue.get(timeout=timeout)
 
             command.response(response)
 

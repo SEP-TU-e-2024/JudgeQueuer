@@ -10,7 +10,7 @@ from azurewrap import Azure
 from custom_logger import main_logger
 from evaluators import SubmissionEvaluator
 from models import JudgeRequest, JudgeResult, MachineType
-from protocol.judge.commands.start_command import StartCommand
+from protocol.judge.commands import CheckCommand, StartCommand
 from protocol.judge_protocol_handler import (
     get_protocol_from_machine_name,
     is_machine_name_connected,
@@ -107,12 +107,6 @@ class AzureEvaluator(SubmissionEvaluator):
         # Then forward call to that.
         judge_result = await judgevmss.submit(judge_request)
 
-        # TODO: close VMSS if empty?
-        # if await judgevmss.is_empty():
-        #     # judgevmss is empty with no vms, close judgevmss
-        #     await judgevmss.close()
-        #     self.judgevmss_dict.pop(machine_type)
-
         return judge_result
 
 class JudgeVMSS:
@@ -159,7 +153,8 @@ class JudgeVMSS:
         # Downsize capacity if low usage
         if not judgevm.is_busy():
             # TODO make sure this doesnt give concurrency issues
-            self.azure.delete_vm(vm.name, vmss_name=self.vmss.name)
+            # self.azure.delete_vm(vm.name, vmss_name=self.vmss.name)
+            pass
 
         return judge_result
 
@@ -172,21 +167,6 @@ class JudgeVMSS:
         await self.azure.set_capacity(capacity + 1, self.judgevmss_name)
         
         # Update judgevm_dict, vm(s) could have been added
-        await self.__update_vm_dict()
-            
-    async def reduce_capacity(self):
-        """
-        Reduces capacity of vmss using Azure which could include reducing amount of vms present.
-        """
-        # Decrease capacity of vmss
-        capacity = self.vmss.sku.capacity
-
-        # There needs to be capacity to be removed
-        if capacity > 0:
-            # TODO can be unsafe as it can remove a vm that is bussy
-            await self.azure.set_capacity(capacity - 1, self.judgevmss_name)
-
-        # Update vm_dict, vm(s) could have been deleted
         await self.__update_vm_dict()
 
     async def check_available_vm(self, cpus: int, memory: int) -> VirtualMachineScaleSetVM | None:
@@ -224,7 +204,9 @@ class JudgeVMSS:
 
                 if not is_machine_name_connected(machine_name):
                     logger.info(f"Waiting for VM {vm.name} with machine name {machine_name} to connect")
-                    while not is_machine_name_connected(machine_name): # TODO: notification from judge protocol handler instead of polling
+
+                    # TODO: notification from judge protocol handler instead of polling
+                    while not is_machine_name_connected(machine_name):
                         await asyncio.sleep(1)
                         # TODO: implement timeout
 
@@ -240,6 +222,8 @@ class JudgeVMSS:
             if not await judgevm.alive():
                 # Remove judgevm from dictionary
                 self.judgevm_dict.pop(key)
+                # Delete the VM
+                await self.azure.delete_vm(key, self.judgevmss_name, block=False)
 
     async def is_empty(self) -> bool:
         """
@@ -277,7 +261,7 @@ class JudgeVM:
         self.azure = azure
         self.free_cpu = cpus
         self.free_memory = memory
-    
+
     async def check_capacity(self, cpus: int, memory: int) -> bool:
         """
         Check whether this vm has enough capacity to take on the resource allocation
@@ -314,5 +298,18 @@ class JudgeVM:
         return len(self.tasks) > 0
 
     async def alive(self):
-        # TODO check if self.vm is actually still alive (decreasing capacity in vmss can remove it, or by calling delete_vm)
-        return True
+        """
+        Checks if the VM is still alive through a health check.
+        """
+        logger.info(f"Checking health of VM {self.vm.name}")
+
+        try:
+            protocol = get_protocol_from_machine_name(self.machine_name)
+
+            protocol.send_command(CheckCommand(), True, timeout=3)
+
+            logger.info(f"VM {self.vm.name} healthy")
+            return True
+        except Exception:
+            logger.error(f"JudgeVM {self.vm.name} is no longer alive", exc_info=1)
+            return False
