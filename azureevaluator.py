@@ -153,8 +153,7 @@ class JudgeVMSS:
         # Downsize capacity if low usage
         if not judgevm.is_busy():
             # TODO make sure this doesnt give concurrency issues
-            # self.azure.delete_vm(vm.name, vmss_name=self.vmss.name)
-            pass
+            self.azure.delete_vm(vm.name, vmss_name=self.vmss.name)
 
         return judge_result
 
