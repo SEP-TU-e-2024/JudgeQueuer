@@ -75,7 +75,20 @@ class JudgeResult:
 
     Formatted in JSON.
     """
-    result: str
+    result: str | None
+    cause: str | None
     
-    def __init__(self, result: str):
+    def __init__(self, result: str | None, cause: str | None):
         self.result = result
+        self.cause = cause
+
+    @staticmethod
+    def success(result: str):
+        return JudgeResult(result=result, cause=None)
+
+    @staticmethod
+    def error(cause: str):
+        return JudgeResult(result=None, cause=cause)
+
+    def __str__(self) -> str:
+        return f"JudgeResult(result={self.result}, cause={self.cause})"

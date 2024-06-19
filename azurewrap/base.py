@@ -15,7 +15,6 @@ from azure.mgmt.network.aio import NetworkManagementClient
 from azure.mgmt.resource.resources.aio import ResourceManagementClient
 
 DEFAULT_LOCATION = "UK South"
-VMSS_NAME = "my-vmss"
 
 
 class Azure:
@@ -73,7 +72,7 @@ class Azure:
         """
         return await self.list_sku_names("disks", location)
 
-    async def list_vms(self, vmss_name=VMSS_NAME) -> List[VirtualMachineScaleSetVM]:
+    async def list_vms(self, vmss_name) -> List[VirtualMachineScaleSetVM]:
         """
         List the VMs in the set.
         """
@@ -87,7 +86,7 @@ class Azure:
 
         return vms
 
-    async def delete_vmss(self, vmss_name=VMSS_NAME):
+    async def delete_vmss(self, vmss_name):
         """
         Deletes a VMSS.
         """
@@ -97,7 +96,7 @@ class Azure:
 
         await poller.wait()
 
-    async def get_vmss(self, name=VMSS_NAME) -> VirtualMachineScaleSet:
+    async def get_vmss(self, name) -> VirtualMachineScaleSet:
         """
         Gets the Virtual Machine Scale Set instance.
         """
@@ -220,7 +219,7 @@ class Azure:
 
         await poller.wait()
 
-    async def set_capacity(self, capacity: int, vmss_name=VMSS_NAME):
+    async def set_capacity(self, capacity: int, vmss_name):
         """
         Sets the capacity of the Virtual Machine Scale Set (the amount of instances).
 
@@ -234,7 +233,7 @@ class Azure:
         )
         await poller.wait()
 
-    async def delete_vm(self, vm_name: str, vmss_name=VMSS_NAME):
+    async def delete_vm(self, vm_name: str, vmss_name, block: bool = True):
         """
         Deletes a specific VM from the set.
 
@@ -244,7 +243,8 @@ class Azure:
         poller = await self.compute_client.virtual_machine_scale_sets.begin_delete_instances(
             self.resource_group_name, vmss_name, ids
         )
-        await poller.wait()
+        if block:
+            await poller.wait()
 
     async def close(self):
         """
