@@ -9,10 +9,17 @@ class StartCommand(Command):
     """
     The StartCommand class is used to start a container on the runner.
     """
+    success: bool = True
+    result: dict = None
+    cause: str = None
 
     def __init__(self):
         super().__init__(name="START")
 
     def response(self, response: dict):
-        print("Got VM response:", response)
-        self.result = response["results"]
+        self.success = response["status"] == "ok"
+
+        if self.success:
+            self.result = response["results"]
+        else:
+            self.cause = response["cause"]

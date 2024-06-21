@@ -11,7 +11,7 @@ import os
 from azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from custom_logger import main_logger
-from models import JudgeRequest, MachineType, ResourceSpecification, Submission
+from models import JudgeRequest, MachineType, Submission
 from protocol import judge_protocol_handler, website_protocol_handler
 
 # Initialize the logger
@@ -51,13 +51,22 @@ async def main():
 async def send_test_submission():
     submission = Submission(1, "https://storagebenchlab.blob.core.windows.net/submissions/submission.zip", "https://storagebenchlab.blob.core.windows.net/validators/validator.zip")
     machine_type = MachineType("Standard_B1s", "Standard")
-    resource_allocation = ResourceSpecification(num_cpu=1, num_memory=10, num_gpu=0, machine_type=machine_type, time_limit=30)
-    judge_request = JudgeRequest(submission, resource_allocation)
+    evaluation_settings = {
+        "cpu":1,
+		"time_limit":60.0,
+		"memory":256,
+		"machine_type":"Standard_B1s"
+	}
+    benchmark_instancs = {
+        '0a800b64-0cce-4cb2-95ab-39a5064ece4e': 'https://storagebenchlab.blob.core.windows.net/benchmark-instances-test-validator/instance2.txt',
+        '83a8977e-760a-4d44-9a67-e07ca4d4c155': 'https://storagebenchlab.blob.core.windows.net/benchmark-instances-test-validator/instance1.txt'
+    }
+    judge_request = JudgeRequest(submission, machine_type, cpus=1, memory=256, evaluation_settings=evaluation_settings, benchmark_instances=benchmark_instancs)
 
     # Test out submitting judge request
     logger.info("Submitting judge request...")
     judge_result = await ae.submit(judge_request)
-    logger.info(f"Received VM judge result {judge_result.result}")
+    logger.info(f"Received VM judge result {judge_result}")
 
 if __name__ == "__main__":
     # Wrap main to make sure all Azure objects are closed properly

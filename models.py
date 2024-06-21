@@ -29,23 +29,6 @@ class MachineType:
 
         return MachineType(name=name, tier=parts[0])
 
-class ResourceSpecification:
-    """
-    The specification of allocated resources to evaluate a submission.
-    """
-    num_cpu: int
-    num_memory: int
-    num_gpu: int
-    machine_type: 'MachineType'
-    time_limit: int # in seconds
-
-    def __init__(self, num_cpu: int, num_memory: int, num_gpu: int, machine_type: 'MachineType', time_limit: int):
-        self.num_cpu = num_cpu
-        self.num_memory = num_memory # in MB
-        self.num_gpu = num_gpu
-        self.machine_type = machine_type
-        self.time_limit = time_limit
-
 class SubmissionType(Enum):
     """
     The type of a submission: either code, or solution.
@@ -72,11 +55,19 @@ class JudgeRequest:
     A request for a submission to be evaluated according to some resource specification.
     """
     submission: 'Submission'
-    resource_specification: 'ResourceSpecification'
+    machine_type: MachineType
+    cpus: int
+    memory: int # MB
+    evaluation_settings: dict
+    benchmark_instances: dict[str, str]
 
-    def __init__(self, submission: 'Submission', resource_specification: 'ResourceSpecification'):
+    def __init__(self, submission: 'Submission', machine_type: MachineType, cpus: int, memory: int, evaluation_settings: dict, benchmark_instances: dict[str, str]):
         self.submission = submission
-        self.resource_specification = resource_specification
+        self.machine_type = machine_type
+        self.cpus = cpus
+        self.memory = memory
+        self.evaluation_settings = evaluation_settings
+        self.benchmark_instances = benchmark_instances
 
 class JudgeResult:
     """
@@ -84,7 +75,20 @@ class JudgeResult:
 
     Formatted in JSON.
     """
-    result: str
+    result: str | None
+    cause: str | None
     
-    def __init__(self, result: str):
+    def __init__(self, result: str | None, cause: str | None):
         self.result = result
+        self.cause = cause
+
+    @staticmethod
+    def success(result: str):
+        return JudgeResult(result=result, cause=None)
+
+    @staticmethod
+    def error(cause: str):
+        return JudgeResult(result=None, cause=cause)
+
+    def __str__(self) -> str:
+        return f"JudgeResult(result={self.result}, cause={self.cause})"

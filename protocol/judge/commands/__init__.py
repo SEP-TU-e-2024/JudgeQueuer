@@ -2,7 +2,9 @@
 This module contains the judge commands.
 """
 
+from .check_command import CheckCommand
 from .command import Command
-from .judge_commands import Commands
+from .info_command import InfoCommand
+from .start_command import StartCommand
 
-__all__ = ["Commands", "Command"]
+__all__ = ["Command", "CheckCommand", "InfoCommand", "StartCommand"]
