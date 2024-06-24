@@ -28,19 +28,6 @@ VMAPP_GALLERY = os.getenv("AZURE_VMAPP_GALLERY")
 VMAPP_NAME = os.getenv("AZURE_VMAPP_NAME")
 VMAPP_VERSION = os.getenv("AZURE_VMAPP_VERSION")
 
-instance = None
-"""
-Keep track of the instance of the AzureEvaluator class, for access in Command classes.
-"""
-def get_instance() -> 'AzureEvaluator':
-    """
-    Get the instance of the AzureEvaluator class.
-    """
-    if instance is None:
-        raise Exception("AzureEvaluator instance is not initialized")
-
-    return instance
-
 class AzureEvaluator(SubmissionEvaluator):
     """
     An evaluator using Azure Virtual Machine Scale Set.
@@ -49,12 +36,9 @@ class AzureEvaluator(SubmissionEvaluator):
     azure: Azure
     
     def __init__(self, azure: Azure):
+        super().__init__()
         self.judgevmss_dict = {}
         self.azure = azure
-
-        # Update the global instance variable with this instance
-        global instance
-        instance = self
 
     async def initialize(self):
         """
