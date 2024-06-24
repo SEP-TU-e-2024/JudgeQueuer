@@ -11,6 +11,7 @@ import os
 from azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from custom_logger import main_logger
+from localevaluator import LocalEvaluator
 from models import JudgeRequest, MachineType, Submission
 from protocol import judge_protocol_handler, website_protocol_handler
 
@@ -21,9 +22,8 @@ logger = main_logger.getChild("JudgeQueuer")
 SUBSCRIPTION_ID = os.getenv("AZURE_SUBSCRIPTION_ID")
 RESOURCE_GROUP_NAME = os.getenv("AZURE_RESOURCE_GROUP_NAME")
 
-# Initiate Azure objects
-azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
-ae = AzureEvaluator(azure)
+# Initialize Azure object
+azure: Azure = None
 
 # Initiate protocol constants
 JUDGE_PROTOCOL_HOST = "0.0.0.0"
@@ -33,8 +33,19 @@ WEBSITE_PROTOCOL_PORT = 30000
 
 
 async def main():
-    logger.info("Initializer AzureEvaluator...")
-    await ae.initialize()
+    global azure
+    if os.getenv("EVALUATOR", "local") == "azure":
+        # Initiate Azure objects
+        azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
+        evaluator = AzureEvaluator(azure)
+
+        logger.info("Initializer AzureEvaluator...")
+    else:
+        evaluator = LocalEvaluator()
+        logger.info("Initializer LocalEvaluator...")
+
+    # Initialize evaluator
+    await evaluator.initialize()
 
     logger.info("Starting protocols...")
 
@@ -43,12 +54,12 @@ async def main():
 
     logger.info("JudgeQueuer ready")
 
-    # await send_test_submission()
+    # await send_test_submission(evaluator)
 
     judge_thread.join()
     website_thread.join()
 
-async def send_test_submission():
+async def send_test_submission(evaluator):
     submission = Submission(1, "https://storagebenchlab.blob.core.windows.net/submissions/submission.zip", "https://storagebenchlab.blob.core.windows.net/validators/validator.zip")
     machine_type = MachineType("Standard_B1s", "Standard")
     evaluation_settings = {
@@ -65,7 +76,7 @@ async def send_test_submission():
 
     # Test out submitting judge request
     logger.info("Submitting judge request...")
-    judge_result = await ae.submit(judge_request)
+    judge_result = await evaluator.submit(judge_request)
     logger.info(f"Received VM judge result {judge_result}")
 
 if __name__ == "__main__":
@@ -74,7 +85,8 @@ if __name__ == "__main__":
         try:
             await main()
         finally:
-            await azure.close()
+            if azure is not None:
+                await azure.close()
 
     # Run the main wrapper async
     asyncio.run(wrap_main())
