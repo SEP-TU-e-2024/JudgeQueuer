@@ -1,4 +1,4 @@
-import azureevaluator
+import evaluators
 from custom_logger import main_logger
 from models import (
     JudgeRequest,
@@ -38,7 +38,7 @@ class StartCommand(Command):
 
         # Submit the request to the evaluator
         try:
-            judge_result = await azureevaluator.get_instance().submit(judge_request)
+            judge_result = await evaluators.get_instance().submit(judge_request)
 
             if judge_result.result is not None:
                 return {"status": "ok", "result": judge_result.result}
