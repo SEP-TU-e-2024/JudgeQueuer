@@ -151,7 +151,7 @@ class JudgeVMSS:
         judge_result = await judgevm.submit(judge_request)
 
         # Downsize capacity if low usage
-        if not judgevm.is_busy():
+        if not judgevm.is_busy() and os.getenv("NO_DOWN_SIZING") != "True":
             logger.info(f"Deleting VM {vm.name} because it is idle")
             # TODO make sure this doesnt give concurrency issues
             await self.azure.delete_vm(vm.name, vmss_name=self.vmss.name, block=False)
