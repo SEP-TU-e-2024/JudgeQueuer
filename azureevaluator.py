@@ -1,5 +1,6 @@
 import asyncio
 import os
+import threading
 
 from azure.mgmt.compute.models import (
     VirtualMachineScaleSet,
@@ -102,6 +103,7 @@ class JudgeVMSS:
     judgevm_dict: dict[str, 'JudgeVM']
     vmss: VirtualMachineScaleSet
     azure: Azure
+    lock: threading.Lock
 
     def __init__(self, machine_type: MachineType, judgevmss_name: str, vmss: VirtualMachineScaleSet , azure: Azure):
         self.machine_type = machine_type
@@ -109,38 +111,41 @@ class JudgeVMSS:
         self.judgevm_dict = {}
         self.vmss = vmss
         self.azure = azure
+        self.lock = threading.Lock()
 
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
         """
         Handle the request for this machine type vmss, an available vm will be found/created and assigned.
         """
 
-        # Get a right vm that is available
-        vm = await self.check_available_vm(judge_request.cpus, judge_request.memory)
-
-        # If no available vm then add capacity
-        if vm is None:
-            logger.info("No VM available, increasing capacity...")
-            # Get available vm after the added capacity, error if no available
-            await self.add_capacity()
-
-            # TODO: if concurrency, this may give issues (between line above and below, other thread may have used new capacity, so it is no longer available)
+        # TODO: remove lock, fix concurrency properly without reducing efficiency
+        with self.lock:
+            # Get a right vm that is available
             vm = await self.check_available_vm(judge_request.cpus, judge_request.memory)
 
+            # If no available vm then add capacity
             if vm is None:
-                raise Exception("No vm available for judge request, even after adding capacity")
+                logger.info("No VM available, increasing capacity...")
+                # Get available vm after the added capacity, error if no available
+                await self.add_capacity()
 
-        # Submit using the vm the judge request
-        judgevm = self.judgevm_dict[vm.name]
-        judge_result = await judgevm.submit(judge_request)
+                # TODO: if concurrency, this may give issues (between line above and below, other thread may have used new capacity, so it is no longer available)
+                vm = await self.check_available_vm(judge_request.cpus, judge_request.memory)
 
-        # Downsize capacity if low usage
-        if not judgevm.is_busy() and os.getenv("NO_DOWN_SIZING", "False") != "True":
-            logger.info(f"Deleting VM {vm.name} because it is idle")
-            # TODO make sure this doesnt give concurrency issues
-            await self.azure.delete_vm(vm.name, vmss_name=self.vmss.name, block=False)
+                if vm is None:
+                    raise Exception("No vm available for judge request, even after adding capacity")
 
-        return judge_result
+            # Submit using the vm the judge request
+            judgevm = self.judgevm_dict[vm.name]
+            judge_result = await judgevm.submit(judge_request)
+
+            # Downsize capacity if low usage
+            if not judgevm.is_busy() and os.getenv("NO_DOWN_SIZING", "False") != "True":
+                logger.info(f"Deleting VM {vm.name} because it is idle")
+                # TODO make sure this doesnt give concurrency issues
+                await self.azure.delete_vm(vm.name, vmss_name=self.vmss.name, block=False)
+
+            return judge_result
 
     async def add_capacity(self):
         """
