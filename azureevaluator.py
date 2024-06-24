@@ -144,7 +144,7 @@ class JudgeVMSS:
                 # TODO make sure this doesnt give concurrency issues
                 await self.azure.delete_vm(vm.name, vmss_name=self.vmss.name, block=False)
 
-                return judge_result
+            return judge_result
 
     async def add_capacity(self):
         """
