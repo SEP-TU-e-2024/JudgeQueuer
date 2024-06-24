@@ -34,7 +34,7 @@ WEBSITE_PROTOCOL_PORT = 30000
 
 async def main():
     global azure
-    if os.getenv("EVALUATOR", "local") == "azure":
+    if os.getenv("EVALUATOR", "azure") == "azure":
         # Initiate Azure objects
         azure = Azure(SUBSCRIPTION_ID, RESOURCE_GROUP_NAME)
         evaluator = AzureEvaluator(azure)
