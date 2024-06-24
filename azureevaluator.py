@@ -118,6 +118,7 @@ class JudgeVMSS:
         Handle the request for this machine type vmss, an available vm will be found/created and assigned.
         """
 
+        # TODO: remove lock, fix concurrency properly without reducing efficiency
         with self.lock:
             # Get a right vm that is available
             vm = await self.check_available_vm(judge_request.cpus, judge_request.memory)
