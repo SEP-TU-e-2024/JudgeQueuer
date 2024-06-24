@@ -122,7 +122,7 @@ class JudgeVMSS:
             # Get a right vm that is available
             vm = await self.check_available_vm(judge_request.cpus, judge_request.memory)
 
-        # If no available vm then add capacity
+            # If no available vm then add capacity
             if vm is None:
                 logger.info("No VM available, increasing capacity...")
                 # Get available vm after the added capacity, error if no available
@@ -138,7 +138,7 @@ class JudgeVMSS:
             judgevm = self.judgevm_dict[vm.name]
             judge_result = await judgevm.submit(judge_request)
 
-        # Downsize capacity if low usage
+            # Downsize capacity if low usage
             if not judgevm.is_busy() and os.getenv("NO_DOWN_SIZING", "False") != "True":
                 logger.info(f"Deleting VM {vm.name} because it is idle")
                 # TODO make sure this doesnt give concurrency issues
