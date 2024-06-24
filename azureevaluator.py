@@ -28,19 +28,6 @@ VMAPP_GALLERY = os.getenv("AZURE_VMAPP_GALLERY")
 VMAPP_NAME = os.getenv("AZURE_VMAPP_NAME")
 VMAPP_VERSION = os.getenv("AZURE_VMAPP_VERSION")
 
-instance = None
-"""
-Keep track of the instance of the AzureEvaluator class, for access in Command classes.
-"""
-def get_instance() -> 'AzureEvaluator':
-    """
-    Get the instance of the AzureEvaluator class.
-    """
-    if instance is None:
-        raise Exception("AzureEvaluator instance is not initialized")
-
-    return instance
-
 class AzureEvaluator(SubmissionEvaluator):
     """
     An evaluator using Azure Virtual Machine Scale Set.
@@ -49,12 +36,9 @@ class AzureEvaluator(SubmissionEvaluator):
     azure: Azure
     
     def __init__(self, azure: Azure):
+        super().__init__()
         self.judgevmss_dict = {}
         self.azure = azure
-
-        # Update the global instance variable with this instance
-        global instance
-        instance = self
 
     async def initialize(self):
         """
@@ -151,7 +135,7 @@ class JudgeVMSS:
         judge_result = await judgevm.submit(judge_request)
 
         # Downsize capacity if low usage
-        if not judgevm.is_busy():
+        if not judgevm.is_busy() and os.getenv("NO_DOWN_SIZING", "False") != "True":
             logger.info(f"Deleting VM {vm.name} because it is idle")
             # TODO make sure this doesnt give concurrency issues
             await self.azure.delete_vm(vm.name, vmss_name=self.vmss.name, block=False)

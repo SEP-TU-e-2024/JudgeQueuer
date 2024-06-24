@@ -18,6 +18,8 @@ AZURE_VMAPP_GALLERY = "runner_container_gallery"
 AZURE_VMAPP_NAME = "runner_container_application"
 AZURE_VMAPP_VERSION = "latest"
 WEBSITE_HOST = "localhost"
+NO_DOWN_SIZING = "True"
+EVALUATOR = "azure"
 ```
 
 To find your subscription ID, go to the Subscriptions page on the Azure portal. Here, select the subscription which you want the system to operate under, and it will say the Subscription ID at the top of the page.
@@ -29,6 +31,8 @@ Go to the Network Security Groups page, and create a new NSG with a name of your
 Go to the Virtual Networks page, and create a new Vnet with a name (which you should add to the 'AZURE_VNET_NAME' in the `.env` file). Most settings can be left at the default. If you do change the subnet name, make sure you change the corresponding 'AZURE_VNET_SUBNET_NAME' in `.env`.
 
 Furthermore, you need to import some settings that were used to create the VM Application on the Judge Runner side. These are filled into the `.env` file under `AZURE_VMAPP_...`, and you should use the same values as defined when creating the VM Application.
+
+You can also use a local runner to evaluate submissions. To achieve this, set `EVALUATOR` to `local`. Furthermore, for development, `NO_DOWN_SIZING` is set to `True` in order to prevent Azure VMs from being deleted when they are obsolete. To turn this on (e.g. for a production environment, or for more realistic tests), set this to `False`.
 
 Note that all values of the `.env` file filled in above are good for the current development setup.
 
