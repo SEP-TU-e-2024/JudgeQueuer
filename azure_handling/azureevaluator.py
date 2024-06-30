@@ -2,7 +2,6 @@ import asyncio
 import os
 import queue
 import threading
-import time
 
 from azurewrap import Azure
 from custom_logger import main_logger
@@ -65,48 +64,27 @@ class AzureEvaluator(SubmissionEvaluator):
             #Check whether the queue is empty
             if self.submission_queue.empty():
                 #If so, sleep for one second so we don't overload
-                time.sleep(1)
+                await asyncio.sleep(1)
                 continue
             else:
                 #There is a new request to handle
                 request = self.submission_queue.get()
                 assert type(request) == JudgeRequest
-                request.id = self.get_new_req_id()
                 logger.info(f"AzureEvaluator handling new request: #{request.id}")
                 
-                if request.machine_type in self.judgevmss_dict:
-                    judgevmss = self.judgevmss_dict[request.machine_type]
-                else:
-                    judgevmss = self.create_vmss(request.machine_type, self.get_new_id())
-                
-                self.assign_request(judgevmss.id, request.id)
+                with self.lock:
+                    if request.machine_type in self.judgevmss_dict:
+                        judgevmss = self.judgevmss_dict[request.machine_type]
+                    else:
+                        judgevmss = self.create_vmss(request.machine_type, self.get_new_id())
 
-                #Handle the submission in a separate thread
-                # threading.Thread(target=self.submit_request, args=[judgevmss, request], daemon=True).start()
-                await self.submit_request(judgevmss, request)
-
-    def assign_request(self, vmss_id, req_id):
-        if vmss_id not in self.assigned_requests.keys():
-            self.assigned_requests[vmss_id] = []
-        self.assigned_requests[vmss_id] += [req_id]
-
-    def get_new_vmss_id(self):
-        if len(self.assigned_requests.keys()) == 0:
-            return 1
-        else:
-            return max(self.assigned_requests.keys()) + 1
+                threading.Thread(target=asyncio.run, args=[self.submit_request(judgevmss, request)], daemon=True).start()
     
-    def get_new_req_id(self):
-        if len(self.assigned_requests.values()) == 0:
-            return 1
-        else:
-            return max(self.assigned_requests.values()) + 1
-    
-    async def submit_request(self, judge_vmss, judge_request : JudgeRequest):  # noqa: F821
+    async def submit_request(self, judge_vmss, judge_request : JudgeRequest):
         logger.info(f"Submitting request {judge_request.id} to {judge_vmss.judgevmss_name}")
-        r = await judge_vmss.submit(judge_request)
-        assert type(r) == JudgeResult
-        logger.info(f"Finished Request {judge_request.id} : Result  {r.result}")
+        await judge_vmss.submit(judge_request)
+        # assert type(r) == JudgeResult
+        # logger.info(f"Finished Request {judge_request.id} : Result  {r.result}")
 
 
     async def create_vmss(self, machine_type: MachineType, id: int) -> JudgeResult:
