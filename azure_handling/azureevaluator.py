@@ -29,15 +29,19 @@ class AzureEvaluator(SubmissionEvaluator):
     judgevmss_dict: dict['MachineType', 'JudgeVMSS']
     azure: Azure
     submission_queue : queue.Queue[JudgeRequest]
-    lock : threading.Lock
     
     def __init__(self, azure: Azure):
+        """
+        Constructor of the AzureEvaluator
+        """
+        #Call the constructor of the inherited class
         super().__init__()
+        #Initialize a dictionary to map remote vm's to local vm classes
         self.judgevmss_dict = {}
+        #Initialize object to reference Azure
         self.azure = azure
+        #Create a (threadsafe) queue object to keep track of submissions
         self.submission_queue = queue.Queue()
-        self.assigned_requests = {}
-        self.lock = threading.Lock()
 
     async def initialize(self):
         """
@@ -54,37 +58,33 @@ class AzureEvaluator(SubmissionEvaluator):
             # Store VMSS in the cache dict
             self.judgevmss_dict[machine_type] = judge_vmss
         
-        logger.info('Starting request handling thread')
+        #Start worker thread, which handles all the incoming requests
         threading.Thread(target=asyncio.run, args=[self.handle_requests()], daemon=True).start()
 
 
     async def handle_requests(self):
-        logger.info('Request handling thread succesfully started')
+        """
+        Thread that checks for incoming requests and submits them to active VMSS's.
+        If no VMSS available creates a new one
+        """
         while True:
-            #Check whether the queue is empty
-            if self.submission_queue.empty():
-                #If so, sleep for one second so we don't overload
-                await asyncio.sleep(1)
-                continue
+            #Blocks until a new request is available
+            judge_request = self.submission_queue.get(block=True)
+            #Check whether the request can be handled by any of the current VMSS's
+            if judge_request.machine_type in self.judgevmss_dict:
+                #If so, assign this VMSS
+                judgevmss = self.judgevmss_dict[judge_request.machine_type]
             else:
-                #There is a new request to handle
-                request = self.submission_queue.get()
-                assert type(request) == JudgeRequest
-                logger.info(f"AzureEvaluator handling new request: #{request.id}")
-                
-                with self.lock:
-                    if request.machine_type in self.judgevmss_dict:
-                        judgevmss = self.judgevmss_dict[request.machine_type]
-                    else:
-                        judgevmss = self.create_vmss(request.machine_type, self.get_new_id())
+                #If not, create a new one
+                judgevmss = self.create_vmss(judge_request.machine_type, self.get_new_id())
+            #Submit the request in a new thread
+            threading.Thread(target=asyncio.run, args=[self.forward_request(judgevmss, judge_request)], daemon=True).start()
 
-                threading.Thread(target=asyncio.run, args=[self.submit_request(judgevmss, request)], daemon=True).start()
-    
-    async def submit_request(self, judge_vmss, judge_request : JudgeRequest):
-        logger.info(f"Submitting request {judge_request.id} to {judge_vmss.judgevmss_name}")
+    async def forward_request(self, judge_vmss, judge_request : JudgeRequest):
+        """
+        Forwards a given request to a given VMSS.
+        """
         await judge_vmss.submit(judge_request)
-        # assert type(r) == JudgeResult
-        # logger.info(f"Finished Request {judge_request.id} : Result  {r.result}")
 
 
     async def create_vmss(self, machine_type: MachineType, id: int) -> JudgeResult:
@@ -120,12 +120,16 @@ class AzureEvaluator(SubmissionEvaluator):
         return judgevmss
     
     async def submit(self, judge_request : JudgeRequest):
+        """
+        Submit a new judge request to this AzureEvaluator
+        """
+        #Add the request to the submission queue, for it to be dealt with by the worker thread
         self.submission_queue.put(judge_request)
-        logger.info(f"Submitting submission #{judge_request.id}")
-        #Wait untill submission is fulfilled
+
+        #Acquire condition lock (preventing deadlocks)
         with judge_request.fulfilled:
-            logger.info(f"Submission #{judge_request.id} waiting for fulfillment")
+            #Unacquire lock and wait until the judge_request has been fulfilled
             judge_request.fulfilled.wait()
-        logger.info(f"Judge result #{judge_request.id} fulfilled")
+        #Return the result of the judge_request through the callback
         return judge_request.result
 

@@ -18,10 +18,7 @@ from protocol.judge_protocol_handler import (
 from .judgevm import JudgeVM
 
 # Initialize the logger
-logger = main_logger.getChild("azureevaluator")
-
-# Initialize the logger
-logger = main_logger.getChild("azureevaluator")
+logger = main_logger.getChild("JudgeVMSS")
 
 # Load Azure constants from env vars
 NSG_NAME = os.getenv("AZURE_NSG_NAME")
@@ -31,6 +28,7 @@ VMAPP_RESOURCE_GROUP = os.getenv("AZURE_VMAPP_RESOURCE_GROUP")
 VMAPP_GALLERY = os.getenv("AZURE_VMAPP_GALLERY")
 VMAPP_NAME = os.getenv("AZURE_VMAPP_NAME")
 VMAPP_VERSION = os.getenv("AZURE_VMAPP_VERSION")
+MAX_VM_IDLE_TIME = int(os.getenv("MAX_VM_IDLE_TIME",60))
 
 class JudgeVMSS:
     """
@@ -42,100 +40,129 @@ class JudgeVMSS:
     vmss: VirtualMachineScaleSet
     azure: Azure
     capacity_lock: threading.Lock
-    submission_lock : threading.Lock
-    id: int
+    judge_dict_lock: threading.Lock
     submission_queue: queue.Queue[JudgeRequest]
     dormant_vms: queue.Queue[JudgeVM]
 
     def __init__(self, machine_type: MachineType, judgevmss_name: str, vmss: VirtualMachineScaleSet , azure: Azure):
+        """
+        Constructor of the JudgeVMSS class.
+        """
+        #Store the type of machine for this VMSS
         self.machine_type = machine_type
+        #Store the name of this VMSS
         self.judgevmss_name = judgevmss_name
+        #Store a dictionary to keep map remote VM's to local JudgeVM objects
         self.judgevm_dict = {}
+        #Store a reference to the Azure VMSS object
         self.vmss = vmss
+        #Store a reference to the Azure object
         self.azure = azure
+        #Create a lock for changing the capacity of this VMSS
         self.capacity_lock = threading.Lock()
-        self.submission_lock = threading.Lock()
-        self.id = 0
+        #Create a lock for changing the JudgeVM dictionary
+        self.judge_dict_lock = threading.Lock()
+        #Create a queue object to keep track of submissions for this VMSS
         self.submission_queue = queue.Queue()
+        #Create a queue to keep track of which local VM objects still need a remote connection
         self.dormant_vms = queue.Queue()
 
+        #Start the main worker thread
         threading.Thread(target=asyncio.run, args=[self.request_handler()], daemon=True).start()
 
     async def request_handler(self):
-        logger.info(f'VMSS #{self.id}: Request handling thread succesfully started')
+        """
+        Main worker thread, finds new requests and dishes them out to individual VM's.
+        Creates new VM's if needed.
+        """
+        #Add already existing VM's to the VM dict
         await self.__update_vm_dict()
         while True:
-            #Check whether the queue is empty
-            if self.submission_queue.empty():
-                #If so, sleep for one second so we don't overload
-                # await self.__update_vm_dict()
-                await asyncio.sleep(1)
-                continue
-            else:
-                #There is a new request to handle
-                request = self.submission_queue.get()
-                assert type(request) == JudgeRequest
-
-                logger.info(f"VMSS #{self.id} handling new request: #{request.id}")
-
-                assigned = False
-                for vm_name in self.judgevm_dict:
+            #Get the next request in the queue
+            request = self.submission_queue.get(block=True)
+            #Boolean to track whether the request has been assigned or not
+            assigned = False
+            #Loop over all vm names in the judgevm dictionary
+            for vm_name in self.judgevm_dict:
+                #Get the corresponding JudgeVM object
+                with self.judge_dict_lock:
                     judgevm = self.judgevm_dict[vm_name]
 
-                    if await judgevm.check_capacity(request.cpus, request.memory) or judgevm.check_idle_queue():
-                        # We have an available VM
-                        threading.Thread(target=asyncio.run, args=[self.submit_request_to_vm(request, judgevm)], daemon=True).start()
-                        assigned = True
-                
-                for judgevm in self.dormant_vms.queue:
-                    assert type(judgevm) == JudgeVM
-                    logger.info(f'JudgeVM {judgevm.id} capacity: {judgevm.free_cpu} cpu, {judgevm.free_memory} memory')
-                    if await judgevm.check_capacity(request.cpus, request.memory) or judgevm.check_idle_queue():
-                        #Assign it to a dormant vm with enough space
-                        threading.Thread(target=asyncio.run, args=[self.submit_request_to_vm(request, judgevm)], daemon=True).start()
-                        assigned = True
+                #Check whether there is enough capacity, or there is still space in the idle queue
+                if await judgevm.check_capacity(request.cpus, request.memory) or judgevm.check_idle_queue():
+                    #Assign the request to this VM
+                    threading.Thread(target=asyncio.run, args=[self.forward_request(request, judgevm)], daemon=True).start()
+                    #Mark the request as assigned
+                    assigned = True
+            
+            #If we the request has been assigned, move onto the next request
+            if assigned:
+                continue
 
-                if not assigned:
-                    #We need to create a new VM
-                    judgevm = JudgeVM(None, None, self.azure, request.cpus, request.memory, True)
-                    self.dormant_vms.put(judgevm)
-                    #TODO: Add this to VM Dict somehow, so new requests can be assigned to dormant vms too
-                    threading.Thread(target=asyncio.run, args=[self.submit_request_to_vm(request,judgevm)], daemon=True).start()
-                    threading.Thread(target=asyncio.run, args=[self.add_capacity()],daemon=True).start()
+            #Loop over all the dormant VM's
+            for judgevm in self.dormant_vms.queue:
+                #Check whether there is enough capacity, or there is still space in the idle queue
+                if await judgevm.check_capacity(request.cpus, request.memory) or judgevm.check_idle_queue():
+                    #Assign it to a dormant vm
+                    threading.Thread(target=asyncio.run, args=[self.forward_request(request, judgevm)], daemon=True).start()
+                    #Mark the request as assigned
+                    assigned = True
 
+            #Check if the requst has been assigned so far
+            if not assigned:
+                #We need to create a new VM (dormant)
+                judgevm = JudgeVM(None, None, self.azure, request.cpus, request.memory, True)
+                #Add it to the queue of dormant vm's
+                self.dormant_vms.put(judgevm)
 
+                #Submit the request to this VM (it will be executed as soons at the remote has more capacity)
+                threading.Thread(target=asyncio.run, args=[self.forward_request(request,judgevm)], daemon=True).start()
+                #Add more capacity in Azure
+                threading.Thread(target=asyncio.run, args=[self.add_capacity()],daemon=True).start()
 
-    async def add_capacity_and_submit_to_vm(self, judge_request : JudgeRequest):
-        logger.info(f"VMSS #{self.id}: Not enough capacity, adding new VM")
-
-        await self.add_capacity()
-        vm = await self.check_available_vm(judge_request.cpus, judge_request.memory)
-
-        if vm is None:
-            raise Exception("No vm available for judge request, even after adding capacity")
-    
-        await self.submit_request_to_vm(judge_request, vm)
-
-    async def submit_request_to_vm(self, judge_request : JudgeRequest, vm : JudgeVM):
-        logger.info(f"VMSS #{self.id}: Submitting Request #{judge_request.id} to VM")
+    async def forward_request(self, judge_request : JudgeRequest, vm : JudgeVM):
+        """
+        Given a Judge Request and Virtual Machine, forward the request to the machine.
+        """
+        #Submit the request to the given VM
         await vm.submit(judge_request)
-        
+        #Acquire the lock for the fullfiment condition
         with judge_request.fulfilled:
+            #Release lock and wait untill the judge request has been fulfilled
             judge_request.fulfilled.wait()
 
         # Downsize capacity if low usage
         if not vm.is_busy() and os.getenv("NO_DOWN_SIZING", "False") != "True":
-            with self.capacity_lock:
-                logger.info(f"Deleting VM {vm.vm.name} because it is idle")
-                # TODO make sure this doesnt give concurrency issues
-                await self.azure.delete_vm(vm.vm.name, vmss_name=self.vmss.name, block=False)
-       
+            #Call the removal function
+            await self.start_vm_removal_time(vm)
+    
+    async def start_vm_removal_time(self, judge_vm : JudgeVM):
+        """
+        Removes a specified VM if they are idle for MAX_VM_IDLE_TIME.
+        If MAX_VM_IDLE_TIME = 0, instantly remove it.
+        """
+        for i in range(MAX_VM_IDLE_TIME):
+            #Check if the VM is busy
+            if judge_vm.is_busy():
+                #If so, we don't need to delete
+                return
+            else:
+                #Sleep for one second
+                await asyncio.sleep(1)
+        #Acquire the capacity lock
+        with self.capacity_lock:
+            logger.info(f"Deleting VM {judge_vm.vm.name} because it is idle")
+            #Remove the vm
+            with self.judge_dict_lock:
+                if judge_vm in self.judgevm_dict.keys():
+                    self.judgevm_dict.pop(judge_vm)
+            await self.azure.delete_vm(judge_vm.vm.name, vmss_name=self.vmss.name, block=False)
+        
             
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
         """
         Handle the request for this machine type vmss, an available vm will be found/created and assigned.
         """
-
         self.submission_queue.put(judge_request)
 
     async def add_capacity(self):
@@ -143,7 +170,7 @@ class JudgeVMSS:
         Increases capacity of vmss using Azure which could increase the amount of vmss.
         """
         # Increase capacity of vmss with 1 capacity
-        logger.info(f"JudgeVMSS #{self.id}: Adding New VM!")
+        logger.info(f"JudgeVMSS #{self.vmss.name}: Adding New VM!")
         capacity = self.vmss.sku.capacity
         with self.capacity_lock:
             await self.azure.set_capacity(capacity + 1, self.judgevmss_name)
@@ -161,13 +188,14 @@ class JudgeVMSS:
         await self.__update_vm_dict()
 
         # Get the azure vm class instance associated to the vm
-        for vm_name in self.judgevm_dict:
-            judgevm = self.judgevm_dict[vm_name]
-        
-            # Check if there is enough free resource capacity on this vm
-            if await judgevm.check_capacity(cpus, memory):
-                return judgevm
+        with self.judge_dict_lock:
+            for vm_name in self.judgevm_dict:
+                judgevm = self.judgevm_dict[vm_name]
             
+                # Check if there is enough free resource capacity on this vm
+                if await judgevm.check_capacity(cpus, memory):
+                    return judgevm
+                
         # No vm found
         return None
     
@@ -178,48 +206,50 @@ class JudgeVMSS:
         """
         vms = await self.azure.list_vms(self.judgevmss_name)
 
-        for vm in vms:
-            # Check if each vm has a judgevm class stored to it in dict
-            if vm.name not in self.judgevm_dict:
-                avm = await self.azure.get_vm(vm.name)
-                machine_name = avm.os_profile.computer_name
+        with self.judge_dict_lock:
+            for vm in vms:
+                # Check if each vm has a judgevm class stored to it in dict
+                if vm.name not in self.judgevm_dict:
+                    avm = await self.azure.get_vm(vm.name)
+                    machine_name = avm.os_profile.computer_name
 
-                if not is_machine_name_connected(machine_name):
-                    logger.info(f"Waiting for VM {vm.name} with machine name {machine_name} to connect")
+                    if not is_machine_name_connected(machine_name):
+                        logger.info(f"Waiting for VM {vm.name} with machine name {machine_name} to connect")
 
-                    # TODO: notification from judge protocol handler instead of polling
-                    while not is_machine_name_connected(machine_name):
-                        logger.info(f"Still Waiting for VM {vm.name} with machine name {machine_name} to connect")
-                        await asyncio.sleep(1)
-                        # TODO: implement timeout
+                        # TODO: notification from judge protocol handler instead of polling
+                        while not is_machine_name_connected(machine_name):
+                            logger.info(f"Still Waiting for VM {vm.name} with machine name {machine_name} to connect")
+                            await asyncio.sleep(1)
+                            # TODO: implement timeout
 
-                cpus, memory = await self.azure.get_vm_size(vm.name)
-                
-                if self.dormant_vms.empty():
-                    # Create a new usable VM
-                    judgevm = JudgeVM(vm, machine_name, self.azure, cpus, memory, False)
-                else:
-                    #Give the first dormant VM the connection
-                    judgevm = self.dormant_vms.get()
-                    judgevm.vm = vm
-                    judgevm.machine_name = machine_name
-                    judgevm.free_cpu = cpus
-                    judgevm.free_memory = memory
-                    with judgevm.dormant_condition:
-                        judgevm.dormant_condition.notifyAll()
-                
-                self.judgevm_dict[vm.name] = judgevm
+                    cpus, memory = await self.azure.get_vm_size(vm.name)
+                    
+                    #Check if there is a dormant vm waiting for a connection
+                    if self.dormant_vms.empty():
+                        # Create a new usable VM
+                        judgevm = JudgeVM(vm, machine_name, self.azure, cpus, memory, False)
+                    else:
+                        #Give the first dormant VM the connection
+                        judgevm = self.dormant_vms.get()
+                        judgevm.vm = vm
+                        judgevm.machine_name = machine_name
+                        judgevm.free_cpu = cpus
+                        judgevm.free_memory = memory
+                        #Tell the dormant vm to wake up and start taking requests
+                        with judgevm.dormant_condition:
+                            judgevm.dormant_condition.notifyAll()
+                    #Add the dormant vm to the judge dict
+                    self.judgevm_dict[vm.name] = judgevm
 
-        for key in list(self.judgevm_dict):
-            judgevm = self.judgevm_dict[key]
-            # Check if the vms in the dictionary are still alive
-            if not await judgevm.alive():
-                logger.info(f"Deleting VM {key} because it is no longer alive")
-                # Remove judgevm from dictionary
-                self.judgevm_dict.pop(key)
-                # Delete the VM
-                #TODO: Reenable, this is not meant to be committed
-                # await self.azure.delete_vm(key, self.judgevmss_name, block=False)
+            for key in list(self.judgevm_dict):
+                judgevm = self.judgevm_dict[key]
+                # Check if the vms in the dictionary are still alive
+                if not await judgevm.alive():
+                    logger.info(f"Deleting VM {key} because it is no longer alive")
+                    # Remove judgevm from dictionary
+                    self.judgevm_dict.pop(key)
+                    # Delete the VM
+                    await self.azure.delete_vm(key, self.judgevmss_name, block=False)
 
     async def is_empty(self) -> bool:
         """
