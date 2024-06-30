@@ -214,7 +214,7 @@ class JudgeVMSS:
                 # Remove judgevm from dictionary
                 self.judgevm_dict.pop(key)
                 # Delete the VM
-                await self.azure.delete_vm(key, self.judgevmss_name, block=False)
+                await self.azure.delete_vm(key, self.judgevmss_name, block=True)
 
     async def is_empty(self) -> bool:
         """
