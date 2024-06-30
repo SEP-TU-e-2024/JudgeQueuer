@@ -7,7 +7,6 @@ import json
 from custom_logger import main_logger
 
 from .connection import Connection
-import socket
 
 logger = main_logger.getChild("protocol")
 
