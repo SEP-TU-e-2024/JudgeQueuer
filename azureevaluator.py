@@ -151,7 +151,7 @@ class JudgeVMSS:
         """
         Increases capacity of vmss using Azure which could increase the amount of vmss.
         """
-        vmss = self.azure.get_vmss(self.vmss.name)
+        vmss = await self.azure.get_vmss(self.vmss.name)
         # Increase capacity of vmss with 1 capacity
         capacity = vmss.sku.capacity
         await self.azure.set_capacity(capacity + 1, self.judgevmss_name)
