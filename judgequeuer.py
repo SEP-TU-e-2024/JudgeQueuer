@@ -8,7 +8,7 @@ load_dotenv(override=True)
 import asyncio
 import os
 
-from azureevaluator import AzureEvaluator
+from azure_handling.azureevaluator import AzureEvaluator
 from azurewrap import Azure
 from custom_logger import main_logger
 from localevaluator import LocalEvaluator

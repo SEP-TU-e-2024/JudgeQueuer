@@ -1,3 +1,4 @@
+import threading
 from enum import Enum
 
 
@@ -50,25 +51,6 @@ class Submission:
         self.source_url = source_url
         self.validator_url = validator_url
 
-class JudgeRequest:
-    """
-    A request for a submission to be evaluated according to some resource specification.
-    """
-    submission: 'Submission'
-    machine_type: MachineType
-    cpus: int
-    memory: int # MB
-    evaluation_settings: dict
-    benchmark_instances: dict[str, str]
-
-    def __init__(self, submission: 'Submission', machine_type: MachineType, cpus: int, memory: int, evaluation_settings: dict, benchmark_instances: dict[str, str]):
-        self.submission = submission
-        self.machine_type = machine_type
-        self.cpus = cpus
-        self.memory = memory
-        self.evaluation_settings = evaluation_settings
-        self.benchmark_instances = benchmark_instances
-
 class JudgeResult:
     """
     The result of evaluation by a judge.
@@ -92,3 +74,30 @@ class JudgeResult:
 
     def __str__(self) -> str:
         return f"JudgeResult(result={self.result}, cause={self.cause})"
+
+class JudgeRequest:
+    """
+    A request for a submission to be evaluated according to some resource specification.
+    """
+    submission: 'Submission'
+    machine_type: MachineType
+    cpus: int
+    memory: int # MB
+    evaluation_settings: dict
+    benchmark_instances: dict[str, str]
+    id : int # ID to keep track of multiple requests
+    fulfilled: threading.Condition
+    result: JudgeResult
+
+    def __init__(self, submission: 'Submission', machine_type: MachineType, cpus: int, memory: int, evaluation_settings: dict, benchmark_instances: dict[str, str]):
+        self.submission = submission
+        self.machine_type = machine_type
+        self.cpus = cpus
+        self.memory = memory
+        self.evaluation_settings = evaluation_settings
+        self.benchmark_instances = benchmark_instances
+        self.id = 0
+        self.fulfilled = threading.Condition()
+
+    def __str__(self):
+        return f"Judge Request for {self.machine_type.name} with {self.cpus} CPU(s), {self.memory} Mem"
