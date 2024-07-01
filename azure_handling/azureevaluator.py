@@ -99,7 +99,8 @@ class AzureEvaluator(SubmissionEvaluator):
 
         logger.info(f"Creating VMSS {judgevmss_name}")
 
-        await self.azure.create_vmss(judgevmss_name,
+        await self.azure.create_vmss(
+            judgevmss_name,
             machine_type_name=machine_type.name,
             machine_type_tier=machine_type.tier,
             application_resource_group_name=VMAPP_RESOURCE_GROUP,

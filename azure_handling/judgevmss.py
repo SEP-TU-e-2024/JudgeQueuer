@@ -84,6 +84,7 @@ class JudgeVMSS:
             assigned = False
             #Loop over all vm names in the judgevm dictionary
             for vm_name in self.judgevm_dict:
+                logger.info('assigned to live vm')
                 #Get the corresponding JudgeVM object
                 with self.judge_dict_lock:
                     judgevm = self.judgevm_dict[vm_name]
@@ -102,7 +103,8 @@ class JudgeVMSS:
             #Loop over all the dormant VM's
             for judgevm in self.dormant_vms.queue:
                 #Check whether there is enough capacity, or there is still space in the idle queue
-                if await judgevm.check_capacity(request.cpus, request.memory) or judgevm.check_idle_queue():
+                if judgevm.check_idle_queue():
+                    logger.info('assigned to dormant vm')
                     #Assign it to a dormant vm
                     threading.Thread(target=asyncio.run, args=[self.forward_request(request, judgevm)], daemon=True).start()
                     #Mark the request as assigned
@@ -110,6 +112,7 @@ class JudgeVMSS:
 
             #Check if the requst has been assigned so far
             if not assigned:
+                logger.info('create new vm')
                 #We need to create a new VM (dormant)
                 judgevm = JudgeVM(None, None, self.azure, request.cpus, request.memory, True)
                 #Add it to the queue of dormant vm's

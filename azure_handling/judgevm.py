@@ -184,7 +184,12 @@ class JudgeVM:
 
 
     def is_busy(self):
-        return len(self.tasks) > 0
+        if not self.submission_queue.empty():
+            return True
+        with self.idle_lock:
+            if self.idle_amount > 0:
+                return True
+        return False
 
     async def alive(self):
         """
