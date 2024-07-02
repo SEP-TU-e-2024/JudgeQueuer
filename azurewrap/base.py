@@ -30,9 +30,7 @@ class Azure:
     subscription_id: str
 
     def __init__(self, subscription_id: str, resource_group_name: str):
-        # Exclude managed identity credential, as it was giving Azure deployment issues
-        # (when using portal-based SSH connection, Azure added Managed Identity Credentials to the VM, which took priority over the Azure CLI credentials)
-        self.credentials = DefaultAzureCredential(exclude_managed_identity_credential=True)
+        self.credentials = DefaultAzureCredential()
 
         self.compute_client = ComputeManagementClient(self.credentials, subscription_id)
         self.network_client = NetworkManagementClient(self.credentials, subscription_id)
