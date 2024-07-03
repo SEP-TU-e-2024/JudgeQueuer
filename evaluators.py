@@ -35,5 +35,4 @@ class SubmissionEvaluator(ABC):
         """
         Initialize the evaluator.
         """
-        #Create a (threadsafe) queue object to keep track of submissions
         pass
