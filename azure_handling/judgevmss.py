@@ -20,8 +20,8 @@ from .judgevm import JudgeVM
 # Initialize the logger
 logger = main_logger.getChild("JudgeVMSS")
 
-# Load Azure constants from env vars
-MAX_VM_IDLE_TIME = int(os.getenv("MAX_VM_IDLE_TIME",60))
+# Maximum idling time for a VM, before it is deleted
+MAX_VM_IDLE_TIME = int(os.getenv("MAX_VM_IDLE_TIME", 60))
 
 class JudgeVMSS:
     """
@@ -77,7 +77,7 @@ class JudgeVMSS:
             assigned = False
             #Loop over all vm names in the judgevm dictionary
             for vm_name in self.judgevm_dict:
-                logger.info('assigned to live vm')
+                logger.info('Assigned to live VM')
                 #Get the corresponding JudgeVM object
                 with self.judge_dict_lock:
                     judgevm = self.judgevm_dict[vm_name]
@@ -88,6 +88,7 @@ class JudgeVMSS:
                     threading.Thread(target=asyncio.run, args=[self.forward_request(request, judgevm)], daemon=True).start()
                     #Mark the request as assigned
                     assigned = True
+                    break
             
             #If we the request has been assigned, move onto the next request
             if assigned:
@@ -97,15 +98,16 @@ class JudgeVMSS:
             for judgevm in self.dormant_vms.queue:
                 #Check whether there is enough capacity, or there is still space in the idle queue
                 if judgevm.check_idle_queue():
-                    logger.info('assigned to dormant vm')
+                    logger.info('Assigned to dormant VM')
                     #Assign it to a dormant vm
                     threading.Thread(target=asyncio.run, args=[self.forward_request(request, judgevm)], daemon=True).start()
                     #Mark the request as assigned
                     assigned = True
+                    break
 
             #Check if the requst has been assigned so far
             if not assigned:
-                logger.info('create new vm')
+                logger.info('Create new VM')
                 #We need to create a new VM (dormant)
                 judgevm = JudgeVM(None, None, self.azure, request.cpus, request.memory, True)
                 #Add it to the queue of dormant vm's
@@ -150,11 +152,10 @@ class JudgeVMSS:
             logger.info(f"Deleting VM {judge_vm.vm.name} because it is idle")
             #Remove the vm
             with self.judge_dict_lock:
-                if judge_vm in self.judgevm_dict.keys():
-                    self.judgevm_dict.pop(judge_vm)
+                if judge_vm.vm.name in self.judgevm_dict.keys():
+                    self.judgevm_dict.pop(judge_vm.vm.name)
             await self.azure.delete_vm(judge_vm.vm.name, vmss_name=self.vmss.name, block=False)
-        
-            
+
     async def submit(self, judge_request: JudgeRequest) -> JudgeResult:
         """
         Handle the request for this machine type vmss, an available vm will be found/created and assigned.
@@ -167,7 +168,8 @@ class JudgeVMSS:
         """
         # Increase capacity of vmss with 1 capacity
         logger.info(f"JudgeVMSS #{self.vmss.name}: Adding New VM!")
-        capacity = self.vmss.sku.capacity
+        vmss = await self.azure.get_vmss(self.vmss.name)
+        capacity = vmss.sku.capacity
         with self.capacity_lock:
             await self.azure.set_capacity(capacity + 1, self.judgevmss_name)
         
@@ -219,7 +221,14 @@ class JudgeVMSS:
                             # TODO: implement timeout
 
                     cpus, memory = await self.azure.get_vm_size(vm.name)
-                    
+                    # Adjust for the CPU and memory overhead for the OS and runner code overhead
+                    cpus -= int(os.getenv("MIN_CPUS", 1))
+                    memory -= int(os.getenv("MIN_MEMORY", 512))
+                    if cpus <= 0:
+                        raise Exception("VM does not have enough cpus")
+                    if memory <= 0:
+                        raise Exception("VM does not have enough memory")
+
                     #Check if there is a dormant vm waiting for a connection
                     if self.dormant_vms.empty():
                         # Create a new usable VM

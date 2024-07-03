@@ -20,6 +20,8 @@ AZURE_VMAPP_VERSION = "latest"
 WEBSITE_HOST = "localhost"
 NO_DOWN_SIZING = "True"
 EVALUATOR = "azure"
+MIN_CPUS = "1"
+MIN_MEMORY = "512"
 ```
 
 To find your subscription ID, go to the Subscriptions page on the Azure portal. Here, select the subscription which you want the system to operate under, and it will say the Subscription ID at the top of the page.
