@@ -1,5 +1,4 @@
 import asyncio
-import os
 import queue
 import threading
 
@@ -17,15 +16,6 @@ from protocol.judge_protocol_handler import (
 
 # Initialize the logger
 logger = main_logger.getChild("JudgeVM")
-
-# Load Azure constants from env vars
-NSG_NAME = os.getenv("AZURE_NSG_NAME")
-VNET_NAME = os.getenv("AZURE_VNET_NAME")
-VNET_SUBNET_NAME = os.getenv("AZURE_VNET_SUBNET_NAME")
-VMAPP_RESOURCE_GROUP = os.getenv("AZURE_VMAPP_RESOURCE_GROUP")
-VMAPP_GALLERY = os.getenv("AZURE_VMAPP_GALLERY")
-VMAPP_NAME = os.getenv("AZURE_VMAPP_NAME")
-VMAPP_VERSION = os.getenv("AZURE_VMAPP_VERSION")
 
 class JudgeVM:
     """
