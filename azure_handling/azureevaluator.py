@@ -6,7 +6,7 @@ import threading
 from azurewrap import Azure
 from custom_logger import main_logger
 from evaluators import SubmissionEvaluator
-from models import JudgeRequest, JudgeResult, MachineType
+from models import JudgeRequest, MachineType
 
 from .judgevmss import JudgeVMSS
 
@@ -64,8 +64,9 @@ class AzureEvaluator(SubmissionEvaluator):
 
     async def handle_requests(self):
         """
-        Thread that checks for incoming requests and submits them to active VMSS's.
-        If no VMSS available creates a new one
+        Checks for incoming requests and submits them to active VMSS's.
+
+        If no VMSS available creates a new one.
         """
         while True:
             #Blocks until a new request is available
@@ -76,7 +77,7 @@ class AzureEvaluator(SubmissionEvaluator):
                 judgevmss = self.judgevmss_dict[judge_request.machine_type]
             else:
                 #If not, create a new one
-                judgevmss = self.create_vmss(judge_request.machine_type, self.get_new_id())
+                judgevmss = await self.create_vmss(judge_request.machine_type)
             #Submit the request in a new thread
             threading.Thread(target=asyncio.run, args=[self.forward_request(judgevmss, judge_request)], daemon=True).start()
 
@@ -86,14 +87,10 @@ class AzureEvaluator(SubmissionEvaluator):
         """
         await judge_vmss.submit(judge_request)
 
-
-    async def create_vmss(self, machine_type: MachineType, id: int) -> JudgeResult:
+    async def create_vmss(self, machine_type: MachineType) -> JudgeVMSS:
         """
-        Handles finding, creating and deletion of vmss that is appropriate for this judgeRequest.
+        Creates a new VMSS appropriate for the given machine type.
         """
-        logger.info(f"Starting new vmss: {machine_type.name}")
-
-
         # Get the right VMSS, or make one if needed
         judgevmss_name = "benchlab_judge_" + machine_type.name
 
