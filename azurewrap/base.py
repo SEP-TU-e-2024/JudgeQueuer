@@ -1,4 +1,5 @@
 import json
+import os
 from typing import List
 
 from azure.core.credentials_async import AsyncTokenCredential
@@ -14,7 +15,7 @@ from azure.mgmt.compute.models import (
 from azure.mgmt.network.aio import NetworkManagementClient
 from azure.mgmt.resource.resources.aio import ResourceManagementClient
 
-DEFAULT_LOCATION = "UK South"
+DEFAULT_LOCATION = os.getenv("AZURE_LOCATION")
 
 
 class Azure:
