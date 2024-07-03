@@ -17,7 +17,7 @@ AZURE_VMAPP_RESOURCE_GROUP = "BenchLab"
 AZURE_VMAPP_GALLERY = "runner_container_gallery"
 AZURE_VMAPP_NAME = "runner_container_application"
 AZURE_VMAPP_VERSION = "latest"
-WEBSITE_HOST = "localhost"
+AZURE_LOCATION = "UK South"
 NO_DOWN_SIZING = "True"
 EVALUATOR = "azure"
 ```
