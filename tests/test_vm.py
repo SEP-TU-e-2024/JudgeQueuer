@@ -151,18 +151,6 @@ class TestVM:
             True
         )
 
-        #Create request that consumes all resources
-        request = JudgeRequest(
-            self.submission,
-            MachineType(
-                'test machine type',
-                'test tier'
-            ),
-            1,
-            1024,
-            None,
-            None
-        )
 
         #Check for more capacity than it has
         assert await judge_vm.check_capacity(3, 1024) is False
