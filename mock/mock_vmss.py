@@ -1,30 +1,43 @@
-from azure.mgmt.compute.models import (
-    VirtualMachineScaleSet,
-)
 
-from models import JudgeRequest
+from mock.mock_vm import MockVM
 
 
-class SKU:
+class MockSKU:
     def __init__(self, name, tier):
         self.name = name
         self.tier = tier
+        self.capacity = 0
 
-class MockVMSS(VirtualMachineScaleSet):
-    capacity: int
+class MockVMSS():
     name: str
-    sku: SKU
+    sku: MockSKU
+
+    vms = {}
 
     def __init__(self, sku_name, sku_tier):
-        self.capacity = 0
         self.name = ""
-        self.sku = SKU(sku_name, sku_tier)
+        self.sku = MockSKU(sku_name, sku_tier)
 
     def set_capacity(self, new_capacity):
-        self.capacity = new_capacity
+        diff = new_capacity - self.sku.capacity
+        print(f'capaicty: {new_capacity} diff: {diff}')
+        
+        if diff > 0:
+            if len(self.vms.keys()) == 0:
+                key = 0
+            else:
+                key = max([int(i) for i in self.vms.keys()])
+            for i in range(diff):
+                self.vms[str(i + key + 1)] = MockVM(str(i + key + 1))
+        self.sku.capacity = new_capacity
+
+    def list_vms(self):
+        return self.vms.values()
     
-    def submit(self, judge_request : JudgeRequest):
-        judge_request.result = 'ABC'
-        with judge_request.fulfilled:
-            judge_request.fulfilled.notifyAll()
+    def get_vm_dict(self):
+        return self.vms
+    
+    def clean_up(self):
+        self.vms = {}
+        return
 

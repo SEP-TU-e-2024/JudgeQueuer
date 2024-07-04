@@ -21,7 +21,7 @@ from .judgevm import JudgeVM
 logger = main_logger.getChild("JudgeVMSS")
 
 # Maximum idling time for a VM, before it is deleted
-MAX_VM_IDLE_TIME = int(os.getenv("MAX_VM_IDLE_TIME", 60))
+
 
 class JudgeVMSS:
     """
@@ -139,6 +139,8 @@ class JudgeVMSS:
         Removes a specified VM if they are idle for MAX_VM_IDLE_TIME.
         If MAX_VM_IDLE_TIME = 0, instantly remove it.
         """
+        MAX_VM_IDLE_TIME = int(os.getenv("MAX_VM_IDLE_TIME", 60))
+        
         for i in range(MAX_VM_IDLE_TIME):
             #Check if the VM is busy
             if judge_vm.is_busy():

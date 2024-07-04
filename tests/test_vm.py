@@ -1,5 +1,3 @@
-import asyncio
-import threading
 from unittest.mock import patch
 
 import pytest
@@ -8,7 +6,6 @@ import pytest_asyncio
 from azure_handling.judgevm import JudgeVM
 from mock.mock_azure import MockAzure
 from mock.mock_vm import MockVM
-from mock.mock_vmss import MockVMSS
 from mock.protocol.commands.mock_check_command import MockCheckCommand
 from mock.protocol.commands.mock_start_command import MockStartCommand
 from mock.protocol.mock_judge_protocol import MockJudgeProtocol
@@ -63,6 +60,7 @@ class TestVM:
             1024,
             False
         )
+
 
     @pytest_asyncio.fixture
     async def setup_submission(self):

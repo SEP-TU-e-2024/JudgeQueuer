@@ -1,0 +1,8 @@
+[run]
+omit =
+    azurewrap/*
+    protocol/*
+    judgequeuer.py
+    localevaluator.py
+    mock/*
+    test/*
