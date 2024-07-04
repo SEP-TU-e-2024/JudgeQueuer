@@ -1,5 +1,6 @@
 create -languages Python C++ web src_db.und
 add **/*.py
+exclude tests/
 settings -reportOutputDirectory htmlDir
 settings -metricsOutputFile metrics.csv
 analyze
